@@ -8,164 +8,1526 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Nexus">
-<title>Nexus Directors</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%233fb950'/%3E%3Ctext x='32' y='44' font-family='Arial' font-weight='700' font-size='34' text-anchor='middle' fill='%230d1a10'%3EN%3C/text%3E%3C/svg%3E"><style>
-:root{
-  --bg:#1f242b; --surface:#252b33; --surface-2:#2b323b; --line:#161a1f; --fg:#f4f6f8; --muted:#9aa3ad;
-  --good:#3fb950; --good-ink:#0d1a10; --warn:#e3a33b; --bad:#ef5f56; color-scheme:dark;
-  --f:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
-}
-*{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f);font-size:15px;line-height:1.45;-webkit-text-size-adjust:100%;font-variant-numeric:tabular-nums}
-button,input{font:inherit;color:inherit}
-.wrap{max-width:720px;margin:0 auto;padding:16px 16px calc(32px + env(safe-area-inset-bottom,0px))}
-header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px}
-header .in{max-width:720px;margin:0 auto;display:flex;align-items:center;gap:12px}
-.mark{width:34px;height:34px;border-radius:9px;background:var(--good);color:var(--good-ink);display:grid;place-items:center;font-weight:700;flex:none}
-.ttl{flex:1;min-width:0}.ttl b{display:block;font-size:17px}.ttl span{display:block;font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.btn{border:1px solid var(--surface-2);background:var(--surface);border-radius:10px;padding:8px 12px;font-weight:600;font-size:13px;cursor:pointer}
-.btn.primary{background:var(--good);color:var(--good-ink);border-color:var(--good);width:100%;padding:12px;font-size:15px}
-h2{font-size:13px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:26px 0 8px;font-weight:600}
-.card{background:var(--surface);border-radius:14px;padding:16px}
-.hero{border-left:4px solid var(--good)}
-.eyebrow{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
-.big{font-size:32px;font-weight:700;letter-spacing:-.02em;margin-top:2px}
-.meta{font-size:13px;color:var(--muted);margin-top:4px}
-.kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
-.kpi{background:var(--surface);border-radius:14px;padding:14px}
-.kpi .v{font-size:21px;font-weight:700;margin-top:2px}
-.kpi .s{font-size:12.5px;color:var(--muted)}
-.list{background:var(--surface);border-radius:14px;overflow:hidden}
-.row{display:flex;justify-content:space-between;gap:12px;padding:12px 16px;border-top:1px solid var(--line)}
-.row:first-child{border-top:0}
-.row .l{min-width:0}.row .l b{display:block;font-weight:600;overflow-wrap:anywhere}.row .l span{display:block;font-size:12.5px;color:var(--muted)}
-.row .r{text-align:right;flex:none;font-weight:700}.row .r span{display:block;font-size:12.5px;font-weight:500;color:var(--muted)}
-.row.tot{background:var(--surface-2)}
-.bad{color:var(--bad)}.good{color:var(--good)}.warn{color:var(--warn)}
-.bar{height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden;margin-top:6px}.bar i{display:block;height:100%;background:var(--good)}
-.note{font-size:12.5px;color:var(--muted);margin-top:8px}
-.lock{min-height:100vh;display:grid;place-items:center;padding:24px 16px}
-.lock .card{width:100%;max-width:380px;display:grid;gap:14px}
-.lock input[type=password]{width:100%;background:var(--bg);border:1px solid var(--surface-2);border-radius:10px;padding:12px;font-size:16px}
-.lock label.chk{display:flex;gap:8px;align-items:center;font-size:14px;color:var(--muted)}
-.err{color:var(--bad);font-size:14px;min-height:1.2em}
+<title>Nexus Finance Desk</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%233fb950'/%3E%3Ctext x='32' y='44' font-family='Arial' font-weight='700' font-size='34' text-anchor='middle' fill='%230d1a10'%3EN%3C/text%3E%3C/svg%3E">
+<style>
+html,body{margin:0;background:#1f242b;color:#f4f6f8}
+#nxlock{position:fixed;inset:0;z-index:100;background:#1f242b;display:grid;place-items:center;padding:24px 16px;font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif}
+#nxlock form{width:100%;max-width:380px;background:#252b33;border-radius:14px;padding:18px;display:grid;gap:14px;box-sizing:border-box}
+#nxlock .hd{display:flex;gap:12px;align-items:center}
+#nxlock .mk{width:34px;height:34px;border-radius:9px;background:#3fb950;color:#0d1a10;display:grid;place-items:center;font-weight:700}
+#nxlock b{font-size:17px}#nxlock .sub{font-size:13px;color:#9aa3ad}
+#nxlock input[type=password]{width:100%;box-sizing:border-box;background:#1f242b;color:#f4f6f8;border:1px solid #2b323b;border-radius:10px;padding:12px;font-size:16px}
+#nxlock label{display:flex;gap:8px;align-items:center;font-size:14px;color:#9aa3ad}
+#nxlock button{background:#3fb950;color:#0d1a10;border:0;border-radius:10px;padding:12px;font-size:15px;font-weight:700;cursor:pointer}
+#nxlock .err{color:#ef5f56;font-size:14px;min-height:1.2em}
 [hidden]{display:none!important}
+#nxbar{position:fixed;left:0;right:0;bottom:calc(58px + env(safe-area-inset-bottom,0px));z-index:8;display:flex;justify-content:center;pointer-events:none}
+#nxbar div{pointer-events:auto;background:#2b323b;color:#9aa3ad;font:12.5px "Segoe UI",system-ui,sans-serif;border-radius:999px;padding:5px 12px;margin-bottom:8px;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+#nxbar button{background:none;border:0;color:#3fb950;font:inherit;font-weight:600;cursor:pointer;padding:0 0 0 8px}
 </style>
-</head>
-<body>
-<div id="lock" class="lock">
-  <form class="card" id="f">
-    <div style="display:flex;gap:12px;align-items:center"><div class="mark">N</div><div><b style="font-size:17px">Nexus Property Developers</b><div class="meta" style="margin:0">Directors' view</div></div></div>
-    <input type="password" id="pw" placeholder="Password" autocomplete="current-password" aria-label="Password" required>
-    <label class="chk"><input type="checkbox" id="rem"> Remember on this phone</label>
-    <button class="btn primary" id="go" type="submit">Open</button>
-    <div class="err" id="err" role="alert"></div>
-  </form>
-</div>
-<div id="app" hidden>
-  <header><div class="in"><div class="mark">N</div><div class="ttl"><b>Nexus Directors</b><span id="asat"></span></div><button class="btn" id="out" type="button">Lock</button></div></header>
-  <main class="wrap" id="main"></main>
-</div>
 <script>
+/* Directors' view: stands in for the Claude data connection with a password-locked, read-only copy of the data. */
 (function(){
-const $ = s => document.querySelector(s);
-const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const N = v => (typeof v === "number" && isFinite(v)) ? v : 0;
-const fm = n => Math.round(N(n)).toLocaleString("en-US");
-const mn = n => (N(n)/1e6).toLocaleString("en-US",{minimumFractionDigits:1,maximumFractionDigits:1}) + "m";
-const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-const dt = s => { if(!s) return "Date TBC"; const [y,m,d] = s.slice(0,10).split("-").map(Number); return `${d} ${MON[m-1]} ${y}`; };
-const days = (a,b) => Math.round((new Date(b+"T00:00") - new Date(a+"T00:00"))/864e5);
-const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
-const store = { get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }, set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }, del(k){ try{ localStorage.removeItem(k); }catch(e){} } };
-
-async function decrypt(pw){
-  const r = await fetch("data.enc.json?t=" + Date.now(), {cache:"no-store"});
-  if(!r.ok) throw new Error("load");
-  const e = await r.json();
-  const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveKey"]);
-  const key = await crypto.subtle.deriveKey({name:"PBKDF2", salt:b64(e.salt), iterations:e.iter, hash:"SHA-256"}, base, {name:"AES-GCM", length:256}, false, ["decrypt"]);
-  let plain;
-  try{ plain = await crypto.subtle.decrypt({name:"AES-GCM", iv:b64(e.iv)}, key, b64(e.ct)); }catch(x){ throw new Error("pw"); }
-  return JSON.parse(new TextDecoder().decode(plain));
-}
-
-function rows(items, fn){ return items.length ? `<div class="list">${items.map(fn).join("")}</div>` : ""; }
-
-function render(d){
-  const today = new Date().toISOString().slice(0,10);
-  const cash = d.banks.reduce((s,b)=>s+N(b.balance),0), R = d.recv, P = d.pay;
-  const stale = d.banks.filter(b => b.asOf && days(b.asOf, today) > 7).length;
-  $("#asat").textContent = "Figures as at " + dt((d.updatedAt||d.today||"").slice(0,10));
-  let h = `
-  <section class="card hero">
-    <div class="eyebrow">Cash at bank</div>
-    <div class="big">LKR ${fm(cash)}</div>
-    <div class="meta">${d.banks.length} accounts${stale ? ` · ${stale} with balances more than a week old` : ""}</div>
-  </section>
-  <div class="kpis">
-    <div class="kpi"><div class="eyebrow">Owed by customers</div><div class="v">${mn(R.open)}</div><div class="s">all open instalments</div></div>
-    <div class="kpi"><div class="eyebrow">Overdue</div><div class="v ${R.overdue>0?"bad":""}">${mn(R.overdue)}</div><div class="s">${R.overdueCount} instalments</div></div>
-    <div class="kpi"><div class="eyebrow">Due in 30 days</div><div class="v">${mn(R.due30)}</div><div class="s">from customers</div></div>
-    <div class="kpi"><div class="eyebrow">Owed to suppliers</div><div class="v">${mn(P.open)}</div><div class="s">${P.overdue>0?`<span class="bad">${mn(P.overdue)} overdue</span>`:"none overdue"}</div></div>
-  </div>`;
-
-  h += `<h2>Bank accounts</h2>` + rows(d.banks, b => `<div class="row"><div class="l"><b>${esc(b.name)}</b><span>${esc(b.bank)} · as at ${dt(b.asOf)}</span></div><div class="r">${fm(b.balance)}</div></div>`)
-     + `<div class="list" style="margin-top:8px"><div class="row tot"><div class="l"><b>Total</b></div><div class="r">${fm(cash)}</div></div></div>`;
-
-  if(d.projects && d.projects.length){
-    h += `<h2>Projects</h2>` + d.projects.map(p => {
-      const pct = p.salesValue ? Math.min(100, p.collected/p.salesValue*100) : 0;
-      const spent = p.budget ? Math.min(100, p.cost/p.budget*100) : 0;
-      return `<div class="card" style="margin-top:10px"><div style="display:flex;justify-content:space-between;gap:10px"><b>${esc(p.name)}</b><span class="meta" style="margin:0">${esc(p.status)}</span></div>
-        <div class="kpis" style="margin-top:8px">
-          <div><div class="eyebrow">Units sold</div><div style="font-weight:700;font-size:18px">${p.sold} of ${p.units}</div></div>
-          <div><div class="eyebrow">Sales value</div><div style="font-weight:700;font-size:18px">${mn(p.salesValue)}</div></div>
-        </div>
-        ${p.collected ? `<div class="meta">Collected ${mn(p.collected)} (${pct.toFixed(0)}% of sales value)</div><div class="bar"><i style="width:${pct}%"></i></div>` : ""}
-        ${p.budget ? `<div class="meta">Cost to date ${mn(p.cost)} of ${mn(p.budget)} budget (${spent.toFixed(0)}%)</div><div class="bar"><i style="width:${spent}%;background:var(--warn)"></i></div>` : ""}
-      </div>`; }).join("");
+  const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  const store = { get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }, set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }, del(k){ try{ localStorage.removeItem(k); }catch(e){} } };
+  let ready; const dataP = new Promise(r => ready = r);
+  async function decrypt(pw){
+    const r = await fetch("data.enc.json?t=" + Date.now(), {cache:"no-store"});
+    if(!r.ok) throw new Error("load");
+    const e = await r.json();
+    const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveKey"]);
+    const key = await crypto.subtle.deriveKey({name:"PBKDF2", salt:b64(e.salt), iterations:e.iter, hash:"SHA-256"}, base, {name:"AES-GCM", length:256}, false, ["decrypt"]);
+    let plain; try{ plain = await crypto.subtle.decrypt({name:"AES-GCM", iv:b64(e.iv)}, key, b64(e.ct)); }catch(x){ throw new Error("pw"); }
+    return JSON.parse(new TextDecoder().decode(plain));
   }
-
-  if(R.byProject && R.byProject.length){
-    h += `<h2>Owed by customers, by project</h2>` + rows(R.byProject, x => `<div class="row"><div class="l"><b>${esc(x.project)}</b><span>${x.overdue>0?`<span class="bad">${fm(x.overdue)} overdue</span>`:"nothing overdue"}</span></div><div class="r">${fm(x.open)}</div></div>`);
-    if(R.tbc) h += `<div class="note">Includes LKR ${fm(R.tbc)} with no due date yet (mostly payable at key handover).</div>`;
+  const deny = () => Promise.reject({ code:"not_granted", message:"Read-only directors' view" });
+  function snap(list){ list = list || []; return { size:list.length, empty:!list.length, docs:list.map(d => ({ id:d.id, exists:true, data:() => { const o = Object.assign({}, d); delete o.id; return o; } })) }; }
+  function makeDb(DATA){
+    const cols = DATA.cols || {}, docs = DATA.docs || {};
+    const find = path => { if(Object.prototype.hasOwnProperty.call(docs, path)) return docs[path]; const i = path.lastIndexOf("/"); const c = path.slice(0,i), id = path.slice(i+1); const d = (cols[c]||[]).find(x => x.id === id); if(!d) return null; const o = Object.assign({}, d); delete o.id; return o; };
+    const docRef = path => ({ id:path.split("/").pop(), path,
+      onSnapshot(cb){ const v = find(path); setTimeout(() => cb({ id:path.split("/").pop(), exists:v != null, data:() => v }), 0); return () => {}; },
+      get: async () => { const v = find(path); return { id:path.split("/").pop(), exists:v != null, data:() => v }; },
+      set:deny, update:deny, delete:deny });
+    const colRef = c => { const q = { onSnapshot(cb){ setTimeout(() => cb(snap(cols[c])), 0); return () => {}; }, get: async () => snap(cols[c]),
+      where(){ return q; }, orderBy(){ return q; }, limit(){ return q; }, doc(id){ return docRef(c + "/" + (id || "x")); }, add:deny }; return q; };
+    return { collection: colRef, doc: docRef };
   }
+  const user = { id: async () => null, me: async () => ({}), can: async () => false, canEdit: async () => false, isOwner: async () => false, profiles: async () => ({}), search: async () => [] };
+  window.claude = { use: async name => { const D = await dataP; if(name === "db") return makeDb(D); if(name === "user") return user; return null; } };
 
-  if(R.topOverdue && R.topOverdue.length)
-    h += `<h2>Largest overdue instalments</h2>` + rows(R.topOverdue, x => `<div class="row"><div class="l"><b>${esc(x.customer)}</b><span>${esc(x.project)} ${esc(x.unit)} · ${esc(x.ref)} · due ${dt(x.dueDate)}</span></div><div class="r bad">${fm(x.out)}<span>${days(x.dueDate, today)} days</span></div></div>`);
-
-  if(R.next30 && R.next30.length)
-    h += `<h2>Coming in over the next 30 days</h2>` + rows(R.next30, x => `<div class="row"><div class="l"><b>${esc(x.customer)}</b><span>${esc(x.project)} ${esc(x.unit)} · ${dt(x.dueDate)}</span></div><div class="r">${fm(x.out)}</div></div>`);
-
-  if(P.list && P.list.length)
-    h += `<h2>Supplier payments due</h2>` + rows(P.list, x => `<div class="row"><div class="l"><b>${esc(x.supplier)}</b><span>${esc(x.project)}${x.ref?` · ${esc(x.ref)}`:""} · ${dt(x.dueDate)}</span></div><div class="r ${x.dueDate && x.dueDate < today ? "bad" : ""}">${fm(x.out)}</div></div>`);
-
-  if(d.tax && d.tax.length)
-    h += `<h2>Tax deadlines</h2>` + rows(d.tax, x => { const od = x.dueDate < today; return `<div class="row"><div class="l"><b>${esc(x.item)}</b><span>${dt(x.dueDate)} · ${esc(x.status)}</span></div><div class="r ${od?"bad":""}">${x.amount?fm(x.amount):"–"}<span>${od?"overdue":""}</span></div></div>`; });
-
-  if(d.loans && d.loans.length)
-    h += `<h2>Loans</h2>` + rows(d.loans, x => `<div class="row"><div class="l"><b>${esc(x.name)}</b><span>${esc(x.status)} · ${x.rate}% a year</span></div><div class="r">${fm(x.facility)}<span>${x.out?`${fm(x.out)} outstanding`:"not drawn"}</span></div></div>`);
-
-  h += `<p class="note" style="margin-top:24px">Amounts in Sri Lankan rupees. Summary from the Nexus Finance Desk, refreshed every morning. Confidential: please don't forward the password.</p>`;
-  $("#main").innerHTML = h;
-}
-
-async function open(pw, remember){
-  $("#err").textContent = ""; $("#go").disabled = true; $("#go").textContent = "Opening…";
-  try{
-    const d = await decrypt(pw);
-    if(remember) store.set("nx-dir-pw", pw);
-    render(d); $("#lock").hidden = true; $("#app").hidden = false; window.scrollTo(0,0);
-  }catch(e){
-    store.del("nx-dir-pw");
-    $("#err").textContent = e.message === "pw" ? "That password isn't right." : "Couldn't load the figures. Check your connection and try again.";
-  }finally{ $("#go").disabled = false; $("#go").textContent = "Open"; }
-}
-$("#f").addEventListener("submit", ev => { ev.preventDefault(); open($("#pw").value, $("#rem").checked); });
-$("#out").addEventListener("click", () => { store.del("nx-dir-pw"); $("#main").innerHTML = ""; $("#pw").value = ""; $("#app").hidden = true; $("#lock").hidden = false; });
-const saved = store.get("nx-dir-pw"); if(saved){ $("#rem").checked = true; open(saved, true); }
+  function asAt(D){ const s = (D.at || "").slice(0,10); if(!s) return ""; const [y,m,d] = s.split("-").map(Number); return `${d} ${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][m-1]} ${y}`; }
+  function lock(){ store.del("nx-dir-pw"); location.reload(); }
+  async function open(pw, remember){
+    const err = document.getElementById("nxerr"), btn = document.getElementById("nxgo");
+    err.textContent = ""; btn.disabled = true; btn.textContent = "Opening…";
+    try{
+      const D = await decrypt(pw);
+      if(remember) store.set("nx-dir-pw", pw);
+      document.getElementById("nxlock").remove();
+      const bar = document.getElementById("nxbar");
+      bar.innerHTML = `<div>Directors' view · figures as at ${asAt(D)}<button type="button" id="nxout">Lock</button></div>`; bar.hidden = false;
+      document.getElementById("nxout").onclick = lock;
+      ready(D);
+      setTimeout(() => { const t = document.getElementById("synctxt"); if(t) t.textContent = "View only"; }, 800);
+    }catch(e){
+      store.del("nx-dir-pw");
+      err.textContent = e.message === "pw" ? "That password isn't right." : "Couldn't load the figures. Check your connection and try again.";
+      btn.disabled = false; btn.textContent = "Open";
+    }
+  }
+  document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("nxf").addEventListener("submit", ev => { ev.preventDefault(); open(document.getElementById("nxpw").value, document.getElementById("nxrem").checked); });
+    const saved = store.get("nx-dir-pw"); if(saved){ document.getElementById("nxrem").checked = true; open(saved, true); }
+  });
 })();
 </script>
+</head>
+<body>
+<div id="nxlock">
+  <form id="nxf">
+    <div class="hd"><div class="mk">N</div><div><b>Nexus Property Developers</b><div class="sub">Directors' view of the Finance Desk</div></div></div>
+    <input type="password" id="nxpw" placeholder="Password" autocomplete="current-password" aria-label="Password" required>
+    <label><input type="checkbox" id="nxrem"> Remember on this phone</label>
+    <button id="nxgo" type="submit">Open</button>
+    <div class="err" id="nxerr" role="alert"></div>
+  </form>
+</div>
+<div id="nxbar" hidden></div>
+
+<title>Nexus Finance Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: phone-first app shell — sticky header, single scrolling column (max 760px), fixed bottom tab bar, bottom-sheet editor */
+/* Always-dark "market ticker" palette: charcoal-navy background, white figures, red/green movement colours */
+:root,:root[data-theme="light"],:root[data-theme="dark"]{
+  --bg:#1f242b; --surface:#252b33; --surface-2:#2b323b; --line:#161a1f; --fg:#f4f6f8; --muted:#9aa3ad;
+  --accent:#3fb950; --accent-ink:#0d1a10; --accent-soft:#1f3a26; --brass:#d6a74c;
+  --good:#3fb950; --good-soft:#1c3324; --warn:#e3a33b; --warn-soft:#3a2d16; --bad:#ef5f56; --bad-soft:#3f2224;
+  --shadow:none; color-scheme:dark;
+  --f-display:"Familjen Grotesk","Segoe UI",system-ui,sans-serif;
+  --f-body:"Public Sans","Segoe UI",system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.45;font-variant-numeric:tabular-nums;-webkit-tap-highlight-color:transparent}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+.top-in{max-width:760px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:12px}
+.mark{width:34px;height:34px;border-radius:9px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-family:var(--f-display);font-weight:700;font-size:15px;flex:none}
+.top h1{font-family:var(--f-display);font-size:17px;margin:0;line-height:1.1;font-weight:700;letter-spacing:-.01em}
+.top .sub{font-size:12px;color:var(--muted)}
+.top .tools{margin-left:auto;display:flex;align-items:center;gap:8px}
+.sync{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;white-space:nowrap}
+.iconbtn{width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center}
+.iconbtn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.dot.on{background:var(--good)} .dot.err{background:var(--bad)}
+@media (max-width:420px){.sync span:last-child{display:none}}
+main{max-width:760px;margin:0 auto;padding-inline:16px;padding-block:16px 110px;display:flex;flex-direction:column;gap:18px}
+h2{font-family:var(--f-display);font-size:22px;margin:0;letter-spacing:-.01em;text-wrap:balance}
+h3{font-family:var(--f-display);font-size:16px;margin:0;font-weight:600}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.spread{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.stack{display:flex;flex-direction:column;gap:10px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:var(--shadow);min-width:0}
+.hero{background:var(--surface);color:var(--fg);border:1px solid var(--line);border-left:4px solid var(--good);border-radius:16px;padding:18px}
+.hero .eyebrow{color:inherit;opacity:.8}
+.hero .big{font-family:var(--f-display);font-size:34px;font-weight:700;letter-spacing:-.02em;line-height:1.1;margin-top:4px}
+.hero .meta{font-size:13px;opacity:.85;margin-top:6px}
+.kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (min-width:620px){.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;min-width:0;text-align:left}
+.kpi .v{font-family:var(--f-display);font-size:20px;font-weight:700;margin-top:2px}
+.kpi .s{font-size:12px;color:var(--muted)}
+button.kpi{display:block;width:100%}
+.list{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;padding:13px 14px;border:0;border-top:1px solid var(--line);background:none;text-align:left;width:100%}
+.item:first-child{border-top:0}
+.item:hover{background:var(--surface-2)}
+.item .t{font-weight:600;overflow-wrap:anywhere}
+.item .d{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.item .amt{font-weight:600;text-align:right;white-space:nowrap}
+.item .amt small{display:block;font-weight:400;font-size:12px;color:var(--muted)}
+.chip{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;background:var(--surface-2);color:var(--muted);border:1px solid var(--line);white-space:nowrap;vertical-align:1px}
+.chip.good{background:var(--good-soft);color:var(--good);border-color:transparent}
+.chip.warn{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+.chip.bad{background:var(--bad-soft);color:var(--bad);border-color:transparent}
+.chip.acc{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+.chip.ex{background:transparent;color:var(--brass);border-color:var(--brass)}
+.alerts{display:flex;flex-direction:column;gap:8px}
+.alert{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:12px;background:var(--surface);border:1px solid var(--line);text-align:left;width:100%}
+.alert .bar{width:4px;align-self:stretch;border-radius:4px;background:var(--muted);flex:none}
+.alert.bad .bar{background:var(--bad)} .alert.warn .bar{background:var(--warn)} .alert.good .bar{background:var(--good)}
+.alert .t{display:block;font-weight:600} .alert .d{display:block;font-size:13px;color:var(--muted)}
+.btn{border:1px solid var(--line);background:var(--surface);padding:9px 14px;border-radius:10px;font-weight:600;font-size:14px;min-height:40px}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.btn.small{padding:6px 10px;min-height:32px;font-size:13px}
+.btn[disabled]{opacity:.5;cursor:default}
+.back{border:0;background:none;color:var(--accent);font-weight:600;padding:4px 0;display:inline-flex;align-items:center;gap:4px}
+.seg{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.seg button{border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:6px 12px;font-size:13px;font-weight:600;white-space:nowrap;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.banner{border:1px dashed var(--brass);border-radius:12px;padding:12px 14px;font-size:13px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between;color:var(--fg)}
+.banner b{color:var(--brass)}
+.empty{padding:22px 16px;text-align:center;color:var(--muted);font-size:14px}
+.aging{display:flex;height:12px;border-radius:6px;overflow:hidden;background:var(--surface-2);margin-top:10px}
+.aging span{display:block;height:100%}
+.legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px 12px;margin-top:10px;font-size:12px}
+.legend div{display:flex;gap:6px;align-items:center;min-width:0}
+.legend i{width:10px;height:10px;border-radius:3px;flex:none}
+.legend b{margin-left:auto;font-weight:600}
+.prog{height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden;margin-top:4px}
+.prog span{display:block;height:100%;background:var(--accent)}
+.prog.warn span{background:var(--warn)} .prog.bad span{background:var(--bad)}
+.pm{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px;margin-top:12px;font-size:13px}
+.pm .l{color:var(--muted)} .pm .n{font-weight:600}
+.auto{font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-left:4px}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:8px 10px;text-align:right;border-top:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;border-top:0}
+tr.tot td{font-weight:700;border-top:2px solid var(--fg)}
+tr.click{cursor:pointer} tr.click:hover td{background:var(--surface-2)}
+td.neg,.neg{color:var(--bad)}
+.stmt{display:flex;flex-direction:column;font-size:14px}
+.stmt>div{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:14px;padding:7px 0;border-top:1px solid var(--line)}
+.stmt.one>div{grid-template-columns:minmax(0,1fr) auto}
+.stmt>div:first-child{border-top:0}
+.stmt>div>span:not(:first-child){text-align:right;min-width:84px}
+.stmt .sum{font-weight:700;border-top:1.5px solid var(--fg)}
+.stmt .hd{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.stmt .ind span:first-child{padding-left:12px;color:var(--muted)}
+.note{font-size:12px;color:var(--muted)}
+.chart svg{width:100%;height:auto;display:block}
+.ugrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+@media (min-width:560px){.ugrid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.ucard{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:10px 11px;text-align:left;min-width:0;display:flex;flex-direction:column;gap:3px}
+.ucard .u{font-family:var(--f-display);font-weight:700;font-size:17px;display:flex;justify-content:space-between;align-items:center;gap:6px}
+.ucard .m{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ucard.Booked{border-color:var(--accent)} .ucard.Sold{border-color:var(--good)} .ucard.Reserved{border-color:var(--warn)}
+.hist{display:flex;flex-direction:column;gap:6px;font-size:13px}
+.hist div{display:flex;gap:8px;justify-content:space-between;border-top:1px solid var(--line);padding-top:6px}
+.hist div:first-child{border-top:0;padding-top:0}
+.hist .w{color:var(--muted);text-align:right;flex:none}
+.qt td:first-child,.qt th:first-child{position:sticky;left:0;background:var(--surface);z-index:1;white-space:normal;min-width:148px;max-width:190px}
+.qt tr.grp td{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;padding-top:14px}
+.qt tr.sumr td{font-weight:700}
+.sens td.base{background:var(--accent-soft);color:var(--accent);font-weight:700}
+.chart-legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted)}
+.chart-legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.chart-legend i.ln{height:3px;border-radius:2px;vertical-align:3px;width:14px}
+.asm{display:grid;grid-template-columns:minmax(0,1fr);gap:2px;padding:10px 0;border-top:1px solid var(--line)}
+.asm:first-of-type{border-top:0}
+.asm .an{font-weight:600}.asm .av{color:var(--accent);font-weight:600}
+.asm .ab{font-size:13px;color:var(--muted)}
+@media (min-width:620px){.asm{grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr) minmax(0,1.8fr);gap:12px}}
+.fab{position:fixed;right:max(16px,calc(50% - 364px));bottom:calc(78px + env(safe-area-inset-bottom,0px));z-index:6;border:0;background:var(--accent);color:var(--accent-ink);border-radius:16px;height:52px;padding:0 18px;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,.18);display:flex;align-items:center;gap:8px;font-size:15px}
+.fab svg{width:20px;height:20px}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:7;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav.tabs .in{max-width:760px;margin:0 auto;display:grid;grid-template-columns:repeat(7,1fr)}
+nav.tabs button{border:0;background:none;padding:8px 2px 9px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;line-height:1.15;text-align:center;font-weight:600;color:var(--muted);min-height:58px}
+nav.tabs svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+nav.tabs button[aria-current="page"]{color:var(--accent)}
+.sheet-bg{position:fixed;inset:0;z-index:20;background:rgba(8,16,15,.45);display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);width:100%;max-width:560px;max-height:92%;overflow-y:auto;border-radius:18px 18px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px}
+@media (min-width:620px){.sheet-bg{align-items:center}.sheet{border-radius:18px;max-height:88%}}
+.grab{width:40px;height:4px;border-radius:2px;background:var(--line);align-self:center}
+.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.fld{display:flex;flex-direction:column;gap:4px;min-width:0}
+.fld.full{grid-column:1/-1}
+.fld label,.fld .lbl{font-size:12px;font-weight:600;color:var(--muted)}
+.fld input,.fld select,.fld textarea{border:1px solid var(--line);background:var(--surface-2);border-radius:10px;padding:10px 11px;font-size:16px;width:100%;min-width:0}
+.fld textarea{min-height:64px;resize:vertical}
+.drow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:8px;align-items:center}
+.sec{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:8px}
+.err{color:var(--bad);font-size:13px}
+.ok{color:var(--good);font-size:13px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(140px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:9px 16px;border-radius:99px;font-size:14px;font-weight:600;z-index:30;max-width:calc(100% - 32px);text-align:center}
+@media (prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(24px);opacity:.6}}}
+</style>
+
+<header class="top"><div class="top-in">
+  <div class="mark" aria-hidden="true">N</div>
+  <div><h1>Nexus Finance Desk</h1><div class="sub">Nexus Property Developers (Pvt) Ltd · LKR</div></div>
+  <div class="tools">
+    <div class="sync" id="sync"><span class="dot" id="syncdot"></span><span id="synctxt">Connecting…</span></div>
+    <button class="iconbtn" type="button" data-act="data" aria-label="Import and export with Excel" title="Import / export Excel"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 17v3h16v-3"/></svg></button>
+  </div>
+</div></header>
+
+<main id="view" aria-live="polite"></main>
+
+<button class="fab" id="fab" type="button" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span id="fablbl">Add</span></button>
+
+<nav class="tabs" aria-label="Sections"><div class="in" id="tabs"></div></nav>
+
+<div id="sheetroot"></div>
+<div id="toastroot"></div>
+
+<script>
+(function(){
+"use strict";
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const N = v => { const n = typeof v === "number" ? v : parseFloat(String(v ?? "").replace(/[,\s]/g,"").replace(/^LKR/i,"")); return isFinite(n) ? n : 0; };
+const pad = n => String(n).padStart(2,"0");
+const iso = d => d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const TODAY = new Date(); TODAY.setHours(0,0,0,0);
+const T = iso(TODAY);
+const days = (a,b) => Math.round((new Date(b+"T00:00") - new Date(a+"T00:00"))/864e5);
+const addMonths = (s, m) => { const [y,mo,d] = s.split("-").map(Number); const dt = new Date(y, mo-1+m, 1); const last = new Date(dt.getFullYear(), dt.getMonth()+1, 0).getDate(); dt.setDate(Math.min(d, last)); return iso(dt); };
+const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const fdate = s => { if(!s) return "—"; const [y,m,d] = s.split("-"); return (+d)+" "+MON[+m-1]+" "+y; };
+const fmonth = s => { if(!s) return "—"; const [y,m] = s.split("-"); return MON[+m-1]+" "+y; };
+const fm = n => (n < 0 ? "−" : "") + Math.abs(Math.round(n)).toLocaleString("en-US");
+const fmM = n => { const a = Math.abs(n); const s = a >= 1e9 ? (a/1e9).toFixed(2)+"bn" : a >= 1e6 ? (a/1e6).toFixed(1)+"m" : a >= 1e3 ? Math.round(a/1e3)+"k" : String(Math.round(a)); return (n < 0 ? "−" : "") + s; };
+const pct = (a,b) => b ? Math.max(0, Math.min(100, a/b*100)) : 0;
+const ls = { get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch(e){} } };
+const sum = (arr, f) => arr.reduce((s,x) => s + f(x), 0);
+
+/* ---------- schema ---------- */
+const S = {
+  banks:{ one:"bank account", sheet:"Banks", fields:[
+    {k:"name",l:"Account name",t:"text",req:1,full:1},
+    {k:"bank",l:"Bank",t:"text"},
+    {k:"type",l:"Type",t:"select",o:["Current","Savings","Fixed deposit","Escrow / project","Overdraft"]},
+    {k:"balance",l:"Balance (LKR)",t:"num",req:1,hint:"Overdraft as negative"},
+    {k:"asOf",l:"Balance as at",t:"date",req:1},
+    {k:"note",l:"Notes",t:"area",full:1}]},
+  recv:{ one:"customer instalment", sheet:"Customers", fields:[
+    {k:"customer",l:"Customer",t:"text",req:1,full:1},
+    {k:"project",l:"Project",t:"project"},
+    {k:"unit",l:"Unit",t:"text"},
+    {k:"ref",l:"Instalment / invoice",t:"text",full:1},
+    {k:"dueDate",l:"Due date",t:"date",hint:"Leave blank if not yet known, e.g. key handover"},
+    {k:"amount",l:"Amount due (LKR)",t:"num",req:1},
+    {k:"received",l:"Received (LKR)",t:"num"},
+    {k:"note",l:"Notes",t:"area",full:1}]},
+  pay:{ one:"supplier bill", sheet:"Suppliers", fields:[
+    {k:"supplier",l:"Supplier",t:"text",req:1,full:1},
+    {k:"project",l:"Project",t:"project"},
+    {k:"category",l:"Category",t:"select",o:["Construction","Materials","Consultants","Land","Marketing","Admin","Other"]},
+    {k:"ref",l:"Invoice / bill no.",t:"text"},
+    {k:"dueDate",l:"Due date",t:"date",req:1},
+    {k:"amount",l:"Amount (LKR)",t:"num",req:1},
+    {k:"paid",l:"Paid (LKR)",t:"num"},
+    {k:"note",l:"Notes",t:"area",full:1}]},
+  cash:{ one:"planned cash item", sheet:"Planned cash", fields:[
+    {k:"description",l:"Description",t:"text",req:1,full:1},
+    {k:"date",l:"Expected date",t:"date",req:1},
+    {k:"direction",l:"In or out",t:"select",o:["Out","In"]},
+    {k:"amount",l:"Amount (LKR)",t:"num",req:1},
+    {k:"category",l:"Category",t:"select",o:["Salaries","Equity","Rent & utilities","Statutory","Loan drawdown","Loan repayment","Loan interest","Other"]},
+    {k:"project",l:"Project",t:"project"},
+    {k:"note",l:"Notes",t:"area",full:1}]},
+  tax:{ one:"tax deadline", sheet:"Tax", fields:[
+    {k:"item",l:"What is due",t:"text",req:1,full:1},
+    {k:"taxType",l:"Tax",t:"select",o:["Income tax","VAT","SSCL","WHT","APIT","Other"]},
+    {k:"period",l:"Period",t:"text"},
+    {k:"dueDate",l:"Due date",t:"date",req:1},
+    {k:"amount",l:"Amount (LKR)",t:"num"},
+    {k:"status",l:"Status",t:"select",o:["To do","Prepared","Filed","Paid"]},
+    {k:"doneDate",l:"Filed / paid on",t:"date"},
+    {k:"ref",l:"IRD reference",t:"text"},
+    {k:"note",l:"Notes",t:"area",full:1}]},
+  pl:{ one:"month of management accounts", sheet:"Income statement", fields:[
+    {k:"month",l:"Month",t:"month",req:1,full:1},
+    {k:"revenue",l:"Revenue",t:"num"},
+    {k:"cos",l:"Cost of sales",t:"num"},
+    {k:"admin",l:"Admin expenses",t:"num"},
+    {k:"selling",l:"Selling & marketing",t:"num"},
+    {k:"finance",l:"Finance cost",t:"num"},
+    {k:"other",l:"Other income",t:"num"},
+    {k:"tax",l:"Income tax",t:"num"},
+    {k:"note",l:"Commentary",t:"area",full:1}]},
+  bs:{ one:"balance sheet", sheet:"Balance sheet", fields:[
+    {k:"date",l:"Balance sheet date",t:"date",req:1,full:1},
+    {k:"_h1",l:"Assets",t:"head"},
+    {k:"ppe",l:"Property, plant & equipment",t:"num"},
+    {k:"wip",l:"Development work in progress",t:"num"},
+    {k:"stock",l:"Completed units held for sale",t:"num"},
+    {k:"trade",l:"Trade receivables",t:"num"},
+    {k:"otherRec",l:"Other receivables & prepayments",t:"num"},
+    {k:"cash",l:"Cash & bank",t:"num"},
+    {k:"_h2",l:"Liabilities",t:"head"},
+    {k:"tradePay",l:"Trade payables",t:"num"},
+    {k:"advances",l:"Customer advances",t:"num"},
+    {k:"borrowings",l:"Bank borrowings",t:"num"},
+    {k:"taxPay",l:"Tax payable",t:"num"},
+    {k:"otherPay",l:"Other payables & accruals",t:"num"},
+    {k:"_h3",l:"Equity",t:"head"},
+    {k:"capital",l:"Stated capital",t:"num"},
+    {k:"retained",l:"Retained earnings",t:"num"},
+    {k:"note",l:"Notes",t:"area",full:1}]},
+  projects:{ one:"project", sheet:"Projects", fields:[
+    {k:"name",l:"Project",t:"text",req:1,full:1},
+    {k:"status",l:"Status",t:"select",o:["Planning","Under construction","Completed","Sold out"]},
+    {k:"units",l:"Total units",t:"num"},
+    {k:"unitsSold",l:"Units sold",t:"num"},
+    {k:"salesValue",l:"Sales value (LKR)",t:"num"},
+    {k:"collected",l:"Collected (LKR)",t:"num"},
+    {k:"budget",l:"Cost budget (LKR)",t:"num"},
+    {k:"costToDate",l:"Cost to date (LKR)",t:"num"},
+    {k:"loanFacility",l:"Loan facility (LKR)",t:"num"},
+    {k:"loanOutstanding",l:"Loan outstanding (LKR)",t:"num"},
+    {k:"note",l:"Notes",t:"area",full:1}]},
+  units:{ one:"unit", sheet:"Units", fields:[
+    {k:"project",l:"Project",t:"project",req:1},
+    {k:"unit",l:"Unit no.",t:"text",req:1},
+    {k:"floor",l:"Floor",t:"num"},
+    {k:"sqft",l:"Size (sq.ft)",t:"num"},
+    {k:"pricePerSqft",l:"Price per sq.ft",t:"num"},
+    {k:"price",l:"Agreed price (LKR)",t:"num",hint:"Leave 0 to use size × rate"},
+    {k:"status",l:"Status",t:"select",o:["Available","Reserved","Booked","Sold"],full:1},
+    {k:"_h1",l:"Buyer & payment plan",t:"head"},
+    {k:"customer",l:"Buyer",t:"text",full:1},
+    {k:"bookingDate",l:"Booking date",t:"date"},
+    {k:"bookingPct",l:"Booking %",t:"num"},
+    {k:"instalments",l:"No. of instalments",t:"num"},
+    {k:"frequency",l:"Every",t:"select",o:["Month","Quarter","6 months"]},
+    {k:"firstInstDate",l:"First instalment",t:"date",full:1},
+    {k:"note",l:"Notes",t:"area",full:1}]},
+  loans:{ one:"bank loan", sheet:"Loans", fields:[
+    {k:"name",l:"Loan",t:"text",req:1,full:1},
+    {k:"bank",l:"Bank",t:"text"},
+    {k:"project",l:"Project",t:"project"},
+    {k:"facility",l:"Facility (LKR)",t:"num",req:1},
+    {k:"rate",l:"Interest % a year",t:"num",req:1},
+    {k:"graceMonths",l:"Grace (months)",t:"num",hint:"Interest only"},
+    {k:"repayMonths",l:"Repay over (months)",t:"num"},
+    {k:"status",l:"Status",t:"select",o:["Applied","Approved","Drawing","Repaying","Settled"]},
+    {k:"inForecast",l:"Include in cash forecast",t:"select",o:["Yes","No"]},
+    {k:"drawdowns",l:"Drawdowns",t:"draws",full:1},
+    {k:"note",l:"Notes",t:"area",full:1}]},
+  costs:{ one:"cost budget line", sheet:"Cost budget", fields:[
+    {k:"project",l:"Project",t:"project",req:1,full:1},
+    {k:"head",l:"Cost head",t:"select",o:["Land","Construction","Consultants","Approvals & fees","Admin","Marketing","Finance cost","Other"],full:1},
+    {k:"budget",l:"Budget (LKR)",t:"num"},
+    {k:"actual",l:"Spent to date (LKR)",t:"num"},
+    {k:"committed",l:"Committed, not yet spent",t:"num",full:1},
+    {k:"note",l:"Basis / notes",t:"area",full:1}]}
+};
+const COLS = Object.keys(S);
+const DEF = {
+  banks:{asOf:"T", type:"Current"}, cash:{date:"T", direction:"Out"}, tax:{status:"To do"}, pl:{month:"M"}, bs:{date:"T"},
+  units:{status:"Available", bookingPct:40, instalments:6, frequency:"Month", pricePerSqft:43000},
+  loans:{rate:12, graceMonths:12, repayMonths:24, status:"Applied", inForecast:"Yes"}, costs:{head:"Construction"}
+};
+const LABEL = {
+  banks:r=>r.name, recv:r=>[r.customer, r.unit && "unit "+r.unit, r.ref].filter(Boolean).join(" · "), pay:r=>[r.supplier, r.ref].filter(Boolean).join(" · "),
+  cash:r=>r.description, tax:r=>r.item, pl:r=>fmonth(r.month)+" accounts", bs:r=>"Balance sheet "+fdate(r.date), projects:r=>r.name,
+  units:r=>"Unit "+r.unit+" · "+r.project, loans:r=>r.name, costs:r=>r.project+" · "+r.head
+};
+
+/* ---------- state ---------- */
+const D = {}; const loaded = {}; COLS.forEach(c => { D[c] = []; loaded[c] = false; });
+let db = null, userNS = null, uid = null, dl = null, canWrite = true, connState = "connecting";
+const ui = { view:"home", recvF:"open", payF:"open", taxF:"upcoming", rep:"pl", fy:null, proj:null, uProj:null, uF:"all" };
+try { const h = (location.hash||"").slice(1); if(["home","cash","recv","pay","tax","reports","p65"].includes(h)) ui.view = h; else { const v = ls.get("nx-view"); if(v) ui.view = v; } } catch(e){}
+
+/* ---------- derived ---------- */
+const outR = r => Math.max(0, N(r.amount) - N(r.received));
+const outP = p => Math.max(0, N(p.amount) - N(p.paid));
+const cashAtBank = () => sum(D.banks, b => N(b.balance));
+const recvOpen = () => D.recv.filter(r => outR(r) > 0.5);
+const payOpen = () => D.pay.filter(p => outP(p) > 0.5);
+const taxOpen = () => D.tax.filter(t => t.status !== "Paid" && !(t.status === "Filed" && !N(t.amount)));
+const examples = () => COLS.reduce((n,c) => n + D[c].filter(x => x.example).length, 0);
+const unitPrice = u => N(u.price) || N(u.sqft) * N(u.pricePerSqft);
+const isSold = u => u.status === "Booked" || u.status === "Sold";
+const projNames = () => [...new Set(D.projects.map(p=>p.name).concat(D.units.map(u=>u.project), D.loans.map(l=>l.project), D.costs.map(c=>c.project)).filter(Boolean))].sort();
+
+function loanSched(l){
+  const draws = (Array.isArray(l.drawdowns) ? l.drawdowns : []).filter(d => d && d.date && N(d.amount) > 0).slice().sort((a,b)=>a.date.localeCompare(b.date));
+  const res = { draws, rows:[], drawn: sum(draws, d=>N(d.amount)) };
+  if(!draws.length) return res;
+  const g = Math.max(0, Math.round(N(l.graceMonths))), r = Math.max(1, Math.round(N(l.repayMonths) || 1)), rate = N(l.rate)/100/12;
+  let bal = 0, di = 0;
+  for(let m = 1; m <= g + r; m++){
+    const d = addMonths(draws[0].date, m);
+    while(di < draws.length && draws[di].date < d){ bal += N(draws[di].amount); di++; }
+    const interest = bal * rate, principal = m > g ? bal / (g + r - m + 1) : 0;
+    bal -= principal;
+    res.rows.push({ date:d, interest, principal, payment: interest + principal, bal });
+  }
+  return res;
+}
+function loanOutstanding(l, at){
+  const s = loanSched(l); at = at || T;
+  return Math.max(0, sum(s.draws.filter(d => d.date <= at), d => N(d.amount)) - sum(s.rows.filter(r => r.date <= at), r => r.principal));
+}
+function projStats(p){
+  const name = p.name, us = D.units.filter(u => u.project === name), rv = D.recv.filter(r => r.project === name);
+  const cl = D.costs.filter(c => c.project === name), ln = D.loans.filter(l => l.project === name);
+  const s = { auto:{} };
+  if(us.length){ s.units = us.length; s.sold = us.filter(isSold).length; s.salesValue = sum(us.filter(isSold), unitPrice); s.stock = sum(us.filter(u=>!isSold(u)), unitPrice); s.auto.units = 1; }
+  else { s.units = N(p.units); s.sold = N(p.unitsSold); s.salesValue = N(p.salesValue); }
+  if(rv.length){ s.collected = sum(rv, r => N(r.received)); s.auto.collected = 1; } else s.collected = N(p.collected);
+  if(cl.length){ s.budget = sum(cl, c=>N(c.budget)); s.cost = sum(cl, c=>N(c.actual)); s.committed = sum(cl, c=>N(c.committed)); s.auto.cost = 1; }
+  else { s.budget = N(p.budget); s.cost = N(p.costToDate); s.committed = 0; }
+  if(ln.length){ s.facility = sum(ln, l=>N(l.facility)); s.loanOut = sum(ln, l=>loanOutstanding(l)); s.auto.loan = 1; }
+  else { s.facility = N(p.loanFacility); s.loanOut = N(p.loanOutstanding); }
+  return s;
+}
+function agingOf(rows, outFn){
+  const b = [0,0,0,0,0];
+  rows.forEach(r => { const o = outFn(r); if(o <= 0) return; const od = days(r.dueDate || T, T);
+    b[od <= 0 ? 0 : od <= 30 ? 1 : od <= 60 ? 2 : od <= 90 ? 3 : 4] += o; });
+  return b;
+}
+function forecast(){
+  const y0 = TODAY.getFullYear(), m0 = TODAY.getMonth();
+  const M = []; for(let i=0;i<12;i++){ const d = new Date(y0, m0+i, 1); M.push({key:d.getFullYear()+"-"+pad(d.getMonth()+1), label:MON[d.getMonth()]+" "+String(d.getFullYear()).slice(2), inn:0, out:0, loan:0}); }
+  const raw = s => { const [y,m] = s.split("-").map(Number); return (y-y0)*12 + (m-1-m0); };
+  const idx = s => { if(!s) return 0; const i = raw(s); return i < 0 ? 0 : i; };
+  D.recv.forEach(r => { const o = outR(r); if(o>0 && r.dueDate){ const i = idx(r.dueDate); if(i<12) M[i].inn += o; }});
+  D.pay.forEach(p => { const o = outP(p); if(o>0){ const i = idx(p.dueDate); if(i<12) M[i].out += o; }});
+  D.tax.forEach(t => { if(t.status !== "Paid" && N(t.amount) > 0){ const i = idx(t.dueDate); if(i<12) M[i].out += N(t.amount); }});
+  D.cash.forEach(c => { if(!c.date) return; const i = raw(c.date); if(i < 0 || i > 11) return; if(c.direction === "In") M[i].inn += N(c.amount); else M[i].out += N(c.amount); });
+  D.loans.forEach(l => { if(l.inForecast === "No" || l.status === "Settled") return; const s = loanSched(l);
+    s.draws.forEach(d => { if(d.date < T) return; const i = raw(d.date); if(i >= 0 && i < 12) M[i].inn += N(d.amount); });
+    s.rows.forEach(r => { if(r.date < T) return; const i = raw(r.date); if(i >= 0 && i < 12){ M[i].out += r.payment; M[i].loan += r.payment; } }); });
+  let bal = cashAtBank(); M.forEach(m => { m.open = bal; bal += m.inn - m.out; m.close = bal; });
+  return M;
+}
+function buildSchedule(u){
+  const price = unitPrice(u), bp = N(u.bookingPct), n = Math.max(0, Math.round(N(u.instalments)));
+  const step = u.frequency === "Quarter" ? 3 : u.frequency === "6 months" ? 6 : 1;
+  const rows = [], book = Math.round(price * bp / 100);
+  if(book > 0) rows.push({ ref:`Booking ${bp}%`, dueDate:u.bookingDate, amount:book });
+  const rest = price - book;
+  if(n > 0 && rest > 0){ const each = Math.round(rest / n); let left = rest;
+    for(let i=0;i<n;i++){ const a = i === n-1 ? left : each; left -= a; rows.push({ ref:`Instalment ${i+1} of ${n}`, dueDate:addMonths(u.firstInstDate, i*step), amount:a }); } }
+  return rows;
+}
+
+/* ---------- UI bits ---------- */
+const chip = (t, k) => `<span class="chip ${k||""}">${esc(t)}</span>`;
+const exChip = x => x.example ? " "+chip("Example","ex") : "";
+const AUTO = `<span class="auto" title="Calculated from the app's records">auto</span>`;
+function dueChip(due, done){
+  if(done) return chip("Settled","good");
+  if(!due) return chip("Date TBC");
+  const d = days(T, due);
+  if(d < 0) return chip(-d+"d overdue","bad");
+  if(d === 0) return chip("Due today","warn");
+  if(d <= 14) return chip("Due in "+d+"d","warn");
+  return chip("Due "+fdate(due));
+}
+const uChip = s => chip(s||"Available", s==="Sold"?"good":s==="Booked"?"acc":s==="Reserved"?"warn":"");
+function emptyState(msg, col){
+  return `<div class="list"><div class="empty">${msg}${col && canWrite ? `<div style="margin-top:12px"><button class="btn primary small" data-add="${col}">Add ${esc(S[col].one)}</button></div>` : ""}</div></div>`;
+}
+const notReady = c => !loaded[c] && connState !== "error" && connState !== "offline";
+const loadingList = () => `<div class="list"><div class="empty">Loading…</div></div>`;
+const who = id => id ? `<span data-uid="${esc(id)}">Someone</span>` : "Automatic";
+const DRIVE_URL = "https://drive.google.com/drive/folders/1QRDTChfI2KlJEk6x5f5B2om6KpuEDLqb";
+let SYNC = null, FEAS = null;
+function syncCard(){
+  const s = SYNC;
+  const files = s && Array.isArray(s.files) ? s.files : [];
+  const skipped = s && Array.isArray(s.skipped) ? s.skipped : [];
+  const changes = s ? N(s.changes) : 0;
+  const ago = s && s.ranAt ? days(String(s.ranAt).slice(0,10), T) : null;
+  const state = !s ? chip("Not run yet") : ago > 2 ? chip("Last run "+ago+" days ago","warn") : skipped.length ? chip(skipped.length+" to check","warn") : chip("Up to date","good");
+  return `<section class="card stack">
+    <div class="spread"><h3>Drive import</h3>${state}</div>
+    <p class="note" style="margin:0">${s ? `Last run ${fdate(String(s.ranAt).slice(0,10))}: ${files.length} file${files.length!==1?"s":""} read, ${changes} record${changes!==1?"s":""} updated.` : "Files saved in the Nexus drop folder on Google Drive are read every day at about 6 pm Sri Lanka time and update this app automatically."}</p>
+    ${files.length ? `<div class="stmt one">${files.slice(0,5).map(f=>`<div><span>${esc(f.name)}</span><span class="note">${esc(f.result||"")}</span></div>`).join("")}</div>` : ""}
+    ${skipped.length ? `<div class="stmt one">${skipped.slice(0,5).map(f=>`<div><span>${esc(f.what||f.name||"Item")}</span><span class="note" style="color:var(--warn)">${esc(f.reason||"needs checking")}</span></div>`).join("")}</div>` : ""}
+    <div class="row">${isOwnerView && mcpNS ? `<button class="btn small primary" type="button" data-act="importnow" ${importState.busy?"disabled":""}>${importState.busy ? "Starting…" : "Import new files now"}</button>` : ""}<a class="btn small" style="display:inline-flex;align-items:center;text-decoration:none;color:inherit" href="${DRIVE_URL}" target="_blank" rel="noopener">Open drop folder</a></div>
+    ${importState.msg ? `<p class="note" style="margin:0;${importState.err?"color:var(--bad)":""}">${esc(importState.msg)}</p>` : `<p class="note" style="margin:0">New files are checked every hour from about 9 am to 9 pm Sri Lanka time.</p>`}
+  </section>`;
+}
+const IMPORT_TASK = "trig_018DzKm9QhoSPsCyKHsUT3Qz";
+let mcpNS = null, isOwnerView = false;
+const importState = { busy:false, msg:"", err:false };
+async function importNow(){
+  if(!mcpNS || importState.busy) return;
+  importState.busy = true; importState.msg = ""; importState.err = false; render();
+  try{
+    await mcpNS.callTool("Claude Code Remote", "fire_trigger", { trigger_id: IMPORT_TASK, text: "Started from the app's Import now button." }, { cache:false });
+    importState.msg = "Import started. New files usually appear here within 5–10 minutes.";
+  }catch(e){
+    importState.err = true;
+    const c = e && e.code;
+    importState.msg = c === "server_not_connected" ? "Add the Claude Code Remote connector in claude.ai Settings → Connectors to use this button."
+      : c === "needs_reauth" ? "Reconnect Claude Code Remote in claude.ai Settings → Connectors, then try again."
+      : c === "not_in_manifest" || c === "approval_required" ? "The import wasn't allowed. Tap again and choose Allow when asked."
+      : c === "tool_error" ? "The import couldn't be started: " + (e.message || "the scheduled task refused it") + "."
+      : c === "server_unavailable" || c === "upstream_error" ? "No answer from the import service. Wait a minute, then check above before trying again."
+      : "The import couldn't be started here. The hourly check will still pick up new files.";
+  }
+  importState.busy = false; render();
+}
+async function resolveNames(){
+  const els = [...document.querySelectorAll("[data-uid]")]; if(!els.length || !userNS) return;
+  try{ const ps = await userNS.profiles([...new Set(els.map(e=>e.dataset.uid))]);
+    els.forEach(e => { const p = ps[e.dataset.uid]; if(p) e.textContent = p.isMe ? "You" : (p.name || "A colleague"); }); }catch(e){}
+}
+
+/* ---------- views ---------- */
+const TABS = [
+  {id:"home",l:"Home",i:'<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>'},
+  {id:"cash",l:"Cash",i:'<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><path d="M16 15h2"/>'},
+  {id:"recv",l:"Customers",i:'<path d="M12 19V5"/><path d="M6 11l6-6 6 6"/>'},
+  {id:"pay",l:"Suppliers",i:'<path d="M12 5v14"/><path d="M18 13l-6 6-6-6"/>'},
+  {id:"tax",l:"Tax",i:'<rect x="4" y="4" width="16" height="17" rx="2"/><path d="M8 2v4M16 2v4M4 10h16"/><path d="M9 15l2 2 4-4"/>'},
+  {id:"reports",l:"Reports",i:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>'},
+  {id:"p65",l:"Forecasts",i:'<rect x="6" y="3" width="12" height="18" rx="1"/><path d="M10 7h1M13 7h1M10 11h1M13 11h1M10 15h1M13 15h1M3 21h18"/>'}
+];
+function fabFor(){
+  if(ui.view === "cash") return ["banks","Bank balance"];
+  if(ui.view === "recv") return ["recv","Instalment"];
+  if(ui.view === "pay") return ["pay","Supplier bill"];
+  if(ui.view === "tax") return ["tax","Deadline"];
+  if(ui.view === "reports"){
+    if(ui.rep === "proj") return ui.proj ? ["costs","Cost line"] : ["projects","Project"];
+    return {pl:["pl","Month"], bs:["bs","Balance sheet"], units:["units","Unit"], loans:["loans","Loan"]}[ui.rep] || null;
+  }
+  return null;
+}
+function renderTabs(){
+  $("#tabs").innerHTML = TABS.map(t => `<button type="button" data-tab="${t.id}" ${ui.view===t.id?'aria-current="page"':""}><svg viewBox="0 0 24 24">${t.i}</svg>${t.l}</button>`).join("");
+}
+function exampleBanner(){
+  const n = examples(); if(!n) return "";
+  return `<div class="banner" id="exbanner"><div><b>${n} example rows</b> are showing so you can see how it works. Replace them with Nexus's real figures.</div>${canWrite ? `<button class="btn small" data-act="exclear">Remove examples</button>` : ""}</div>`;
+}
+
+function viewHome(){
+  const cab = cashAtBank(), ro = recvOpen(), po = payOpen();
+  const rTot = sum(ro,outR), pTot = sum(po,outP);
+  const rOver = ro.filter(r => r.dueDate && r.dueDate < T), pSoon = po.filter(p => p.dueDate && days(T,p.dueDate) <= 14);
+  const tOpen = taxOpen().sort((a,b)=>(a.dueDate||"").localeCompare(b.dueDate||""));
+  const t30 = tOpen.filter(t => t.dueDate && days(T,t.dueDate) <= 30);
+  const fc = forecast(); const low = fc.reduce((a,m) => m.close < a.close ? m : a, fc[0]);
+  const lastAsOf = D.banks.map(b=>b.asOf).filter(Boolean).sort().pop();
+  const stale = D.banks.filter(b => !b.asOf || days(b.asOf, T) > 7);
+  const loanDue = []; D.loans.forEach(l => { if(l.status==="Settled") return; const r = loanSched(l).rows.find(x => x.date >= T); if(r && days(T,r.date) <= 14) loanDue.push([l,r]); });
+  const overBudget = D.costs.filter(c => N(c.budget) > 0 && N(c.actual) + N(c.committed) > N(c.budget));
+
+  const A = [];
+  if(rOver.length) A.push(["bad", `${rOver.length} customer instalment${rOver.length>1?"s":""} overdue`, `LKR ${fm(sum(rOver,outR))} to chase`, "recv","overdue"]);
+  const tLate = tOpen.filter(t => t.dueDate && t.dueDate < T);
+  if(tLate.length) A.push(["bad", `${tLate.length} tax item${tLate.length>1?"s":""} past the due date`, tLate.slice(0,2).map(t=>t.item).join(" · "), "tax","upcoming"]);
+  if(D.banks.length && low && low.close < 0) A.push(["bad", `Cash goes negative in ${low.label}`, `Projected closing balance LKR ${fm(low.close)}`, "cash"]);
+  if(overBudget.length) A.push(["bad", `${overBudget.length} cost head${overBudget.length>1?"s":""} over budget`, overBudget.slice(0,2).map(c=>c.project+" · "+c.head).join(" · "), "reports","proj"]);
+  if(loanDue.length) A.push(["warn", `Loan payment due ${fdate(loanDue[0][1].date)}`, `${loanDue[0][0].name}: LKR ${fm(loanDue[0][1].payment)}`, "reports","loans"]);
+  if(pSoon.length) A.push(["warn", `${pSoon.length} supplier payment${pSoon.length>1?"s":""} due within 14 days`, `LKR ${fm(sum(pSoon,outP))}`, "pay","open"]);
+  const tNext = t30.filter(t => !(t.dueDate < T));
+  if(tNext.length) A.push(["warn", `Next tax deadline: ${tNext[0].item}`, `${fdate(tNext[0].dueDate)}${tNext.length>1?` · ${tNext.length-1} more in the next 30 days`:""}`, "tax","upcoming"]);
+  if(stale.length) A.push(["warn", `${stale.length} bank balance${stale.length>1?"s":""} not updated in over a week`, stale.slice(0,3).map(b=>b.name).join(" · "), "cash"]);
+  if(!A.length && D.banks.length) A.push(["good","Nothing needs attention","No overdue items and no deadlines in the next two weeks","home"]);
+
+  const act = []; COLS.forEach(c => D[c].forEach(r => { if(r.updatedBy && r.updatedAt) act.push([c,r]); }));
+  act.sort((a,b) => b[1].updatedAt.localeCompare(a[1].updatedAt));
+  const spark = D.banks.length ? forecastChart(fc, true) : "";
+  return `
+  ${exampleBanner()}
+  <section class="hero">
+    <div class="eyebrow">Cash at bank</div>
+    <div class="big">LKR ${fm(cab)}</div>
+    <div class="meta">${D.banks.length ? `${D.banks.length} account${D.banks.length>1?"s":""} · latest balance ${fdate(lastAsOf)}` : (notReady("banks") ? "Loading…" : "Add your bank accounts in Cash")}</div>
+  </section>
+  <section class="kpis">
+    <button class="kpi" data-go="recv"><div class="eyebrow">Receivable</div><div class="v">${fmM(rTot)}</div><div class="s">${ro.length} open · ${rOver.length} overdue</div></button>
+    <button class="kpi" data-go="pay"><div class="eyebrow">Payable</div><div class="v">${fmM(pTot)}</div><div class="s">${po.length} open · ${pSoon.length} due ≤14d</div></button>
+    <div class="kpi"><div class="eyebrow">Net working cash</div><div class="v">${fmM(cab + rTot - pTot)}</div><div class="s">Cash + receivable − payable</div></div>
+    <button class="kpi" data-go="tax"><div class="eyebrow">Tax due ≤30d</div><div class="v">${t30.length}</div><div class="s">${fmM(sum(t30,t=>N(t.amount)))} where amounts known</div></button>
+  </section>
+  <section class="stack">
+    <h3>Needs attention</h3>
+    <div class="alerts">${A.length ? A.map(a => `<button class="alert ${a[0]}" data-go="${a[3]}" ${a[4]?`data-f="${a[4]}"`:""}><span class="bar"></span><span><span class="t">${esc(a[1])}</span><span class="d">${esc(a[2])}</span></span></button>`).join("") : `<div class="card note">${COLS.every(c=>loaded[c]) ? "Add bank balances, customer instalments and supplier bills to see alerts here." : "Loading…"}</div>`}</div>
+  </section>
+  ${p65Card()}
+  ${ffsCard()}
+  ${syncCard()}
+  ${spark ? `<section class="card chart"><div class="spread"><h3>12-month cash outlook</h3><button class="btn small" data-go="cash">Details</button></div>${spark}<div class="note">Lowest point: ${esc(low.label)} at LKR ${fm(low.close)}</div></section>` : ""}
+  ${act.length ? `<section class="stack"><h3>Recent changes</h3><div class="list">${act.slice(0,6).map(([c,r]) => { const last = (r.log||[]).slice(-1)[0];
+    return `<button class="item" data-edit="${c}:${esc(r.id)}"><div><div class="t">${esc(LABEL[c](r))}</div><div class="d">${who(r.updatedBy)} · ${esc(last ? last.what : "edited")}</div></div><div class="amt"><small>${fdate(r.updatedAt.slice(0,10))}</small></div></button>`; }).join("")}</div></section>` : ""}`;
+}
+
+function forecastChart(fc, compact){
+  const W = 640, H = compact ? 170 : 220, L = 52, R = 12, Tp = 14, B = 26;
+  const vals = fc.map(m => m.close).concat([fc[0].open]);
+  let mn = Math.min(0, ...vals), mx = Math.max(0, ...vals); if(mx === mn) mx = mn + 1;
+  const padv = (mx-mn)*0.08; mx += padv; if(mn < 0) mn -= padv;
+  const x = i => L + (W-L-R) * (i/(fc.length-1)), y = v => Tp + (H-Tp-B) * (1 - (v-mn)/(mx-mn));
+  const ticks = 4, step = (mx-mn)/ticks; let g = "";
+  for(let i=0;i<=ticks;i++){ const v = mn + step*i; g += `<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="var(--muted)">${fmM(v)}</text>`; }
+  const pts = fc.map((m,i) => `${x(i)},${y(m.close)}`).join(" ");
+  const area = `${x(0)},${y(Math.max(mn,0))} ${pts} ${x(fc.length-1)},${y(Math.max(mn,0))}`;
+  let lb = ""; fc.forEach((m,i) => { if(compact && i%2) return; lb += `<text x="${x(i)}" y="${H-6}" text-anchor="middle" font-size="11" fill="var(--muted)">${m.label.split(" ")[0]}</text>`; });
+  const lowI = fc.reduce((a,m,i) => m.close < fc[a].close ? i : a, 0);
+  const zero = mn < 0 ? `<line x1="${L}" x2="${W-R}" y1="${y(0)}" y2="${y(0)}" stroke="var(--bad)" stroke-dasharray="4 3" stroke-width="1.2"/>` : "";
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Projected month-end cash balance for the next 12 months">${g}${zero}
+    <polygon points="${area}" fill="var(--accent)" opacity=".12"/>
+    <polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round"/>
+    ${fc.map((m,i)=>`<circle cx="${x(i)}" cy="${y(m.close)}" r="${i===lowI?5:2.5}" fill="${i===lowI?(m.close<0?"var(--bad)":"var(--brass)"):"var(--accent)"}"/>`).join("")}
+    ${lb}</svg>`;
+}
+
+function viewCash(){
+  const fc = forecast(), banks = D.banks.slice().sort((a,b)=>(a.name||"").localeCompare(b.name||""));
+  const items = D.cash.slice().sort((a,b)=>(a.date||"").localeCompare(b.date||""));
+  const totIn = sum(fc,m=>m.inn), totOut = sum(fc,m=>m.out), hasLoan = fc.some(m=>m.loan>0);
+  return `
+  ${exampleBanner()}
+  <h2>Cash &amp; banks</h2>
+  <section class="stack">
+    <div class="spread"><h3>Bank accounts</h3><span class="note">Total LKR ${fm(cashAtBank())}</span></div>
+    ${notReady("banks") ? loadingList() : banks.length ? `<div class="list">${banks.map(b => `
+      <button class="item" data-edit="banks:${esc(b.id)}"><div><div class="t">${esc(b.name)}${exChip(b)}</div><div class="d">${esc([b.bank,b.type].filter(Boolean).join(" · "))}</div></div>
+      <div class="amt ${N(b.balance)<0?"neg":""}">${fm(N(b.balance))}<small>${b.asOf && days(b.asOf,T)>7 ? `<span style="color:var(--warn)">as at ${fdate(b.asOf)}</span>` : "as at "+fdate(b.asOf)}</small></div></button>`).join("")}</div>`
+      : emptyState("No bank accounts yet. Add each current, savings and escrow account with today's balance.","banks")}
+  </section>
+  <section class="card chart stack">
+    <div><h3>12-month cash flow forecast</h3><div class="note">Starts from today's bank balances. Adds open customer instalments and future loan drawdowns; subtracts open supplier bills, tax with an amount, loan repayments and interest, and planned items. Anything overdue is placed in this month.</div></div>
+    ${forecastChart(fc,false)}
+    <div class="scroll"><table><thead><tr><th>Month</th><th>Cash in</th><th>Cash out</th>${hasLoan?"<th>of which loan</th>":""}<th>Net</th><th>Closing</th></tr></thead><tbody>
+      ${fc.map(m => `<tr><td>${m.label}</td><td>${fmM(m.inn)}</td><td>${fmM(m.out)}</td>${hasLoan?`<td>${fmM(m.loan)}</td>`:""}<td class="${m.inn-m.out<0?"neg":""}">${fmM(m.inn-m.out)}</td><td class="${m.close<0?"neg":""}"><b>${fmM(m.close)}</b></td></tr>`).join("")}
+      <tr class="tot"><td>12 months</td><td>${fmM(totIn)}</td><td>${fmM(totOut)}</td>${hasLoan?`<td>${fmM(sum(fc,m=>m.loan))}</td>`:""}<td class="${totIn-totOut<0?"neg":""}">${fmM(totIn-totOut)}</td><td>${fmM(fc[11].close)}</td></tr>
+    </tbody></table></div>
+  </section>
+  <section class="stack">
+    <div class="spread"><h3>Planned cash items</h3>${canWrite?`<button class="btn small" data-add="cash">Add item</button>`:""}</div>
+    <div class="note">Salaries, equity injections, rent and anything not already in customers, suppliers, tax or loans. Bank loans go under Reports → Loans so their interest and repayments are worked out for you.</div>
+    ${notReady("cash") ? loadingList() : items.length ? `<div class="list">${items.map(c => `
+      <button class="item" data-edit="cash:${esc(c.id)}"><div><div class="t">${esc(c.description)}${exChip(c)}</div><div class="d">${fdate(c.date)} · ${esc(c.category||"")}${c.project?" · "+esc(c.project):""}</div></div>
+      <div class="amt" style="color:${c.direction==="In"?"var(--good)":"var(--fg)"}">${c.direction==="In"?"+":"−"}${fm(N(c.amount))}<small>${c.direction==="In"?"cash in":"cash out"}</small></div></button>`).join("")}</div>`
+      : emptyState("No planned items. Add salaries and other regular payments so the forecast is complete.","cash")}
+  </section>`;
+}
+
+function agingCard(rows, outFn, title){
+  const b = agingOf(rows, outFn), tot = b.reduce((a,c)=>a+c,0);
+  const lab = ["Not yet due","1–30 days","31–60 days","61–90 days","Over 90 days"];
+  const col = ["var(--accent)","var(--warn)","var(--brass)","var(--bad)","var(--fg)"];
+  return `<section class="card"><div class="eyebrow">${title}</div><div style="font-family:var(--f-display);font-size:24px;font-weight:700">LKR ${fm(tot)}</div>
+    <div class="aging" role="img" aria-label="Ageing split">${b.map((v,i)=>v>0?`<span style="width:${pct(v,tot)}%;background:${col[i]}"></span>`:"").join("")}</div>
+    <div class="legend">${b.map((v,i)=>`<div><i style="background:${col[i]}"></i><span>${lab[i]}</span><b>${fmM(v)}</b></div>`).join("")}</div></section>`;
+}
+
+function viewRecv(){
+  const f = ui.recvF, open = recvOpen();
+  let rows = f === "open" ? open : f === "overdue" ? open.filter(r => r.dueDate && r.dueDate < T) : f === "soon" ? open.filter(r => r.dueDate && r.dueDate >= T && days(T,r.dueDate) <= 30) : f === "tbc" ? open.filter(r => !r.dueDate) : f === "paid" ? D.recv.filter(r => outR(r) <= 0.5) : D.recv;
+  rows = rows.slice().sort((a,b)=>(a.dueDate||"9999").localeCompare(b.dueDate||"9999") || String(a.project||"").localeCompare(String(b.project||"")) || String(a.unit||"").localeCompare(String(b.unit||""), undefined, {numeric:true}));
+  const projF = ui.recvP && ui.recvP !== "all" ? ui.recvP : null;
+  if(projF) rows = rows.filter(r => r.project === projF);
+  const allProjs = [...new Set(D.recv.map(r=>r.project).filter(Boolean))].sort();
+  const projs = [...new Set(open.map(r=>r.project).filter(Boolean))];
+  return `
+  ${exampleBanner()}
+  <h2>Customer receivables</h2>
+  ${agingCard(D.recv, outR, "Outstanding from buyers")}
+  ${projs.length > 1 ? `<section class="card"><h3>By project</h3><div class="stmt one" style="margin-top:6px">${projs.map(p=>`<div><span>${esc(p)}</span><b>${fm(sum(open.filter(r=>r.project===p),outR))}</b></div>`).join("")}</div></section>` : ""}
+  <p class="note" style="margin:0">Booking a unit under Reports → Units creates its instalments here automatically.</p>
+  ${allProjs.length > 1 ? `<div class="seg" role="group" aria-label="Project">${[["all","All projects"]].concat(allProjs.map(p=>[p,p])).map(([k,l])=>`<button data-rp="${esc(k)}" aria-pressed="${(ui.recvP||"all")===k}">${esc(l)}</button>`).join("")}</div>` : ""}
+  <div class="seg" role="group" aria-label="Filter">${[["open","Open"],["overdue","Overdue"],["soon","Due ≤30 days"],["tbc","Date TBC"],["paid","Received"],["all","All"]].map(([k,l])=>`<button data-rf="${k}" aria-pressed="${f===k}">${l}</button>`).join("")}</div>
+  <p class="note" style="margin:0">${rows.length} instalment${rows.length!==1?"s":""} · LKR ${fm(sum(rows, r => outR(r) > 0.5 ? outR(r) : 0))} outstanding in this view</p>
+  ${notReady("recv") ? loadingList() : rows.length ? `<div class="list">${rows.map(r => `
+    <button class="item" data-edit="recv:${esc(r.id)}"><div><div class="t">${esc(r.customer)}${exChip(r)}</div><div class="d">${esc([r.project, r.unit && "Unit "+r.unit, r.ref].filter(Boolean).join(" · "))}</div><div style="margin-top:4px">${dueChip(r.dueDate, outR(r)<=0.5)}</div></div>
+    <div class="amt">${fm(outR(r) > 0.5 ? outR(r) : N(r.amount))}<small>${outR(r) > 0.5 ? (N(r.received) ? "of "+fm(N(r.amount)) : "due "+fdate(r.dueDate)) : "received"}</small></div></button>`).join("")}</div>`
+    : emptyState(D.recv.length ? "Nothing in this filter." : "No customer instalments yet. Book units under Reports → Units, or add instalments here.", D.recv.length ? null : "recv")}`;
+}
+
+function viewPay(){
+  const f = ui.payF, open = payOpen();
+  let rows = f === "open" ? open : f === "overdue" ? open.filter(p => p.dueDate && p.dueDate < T) : f === "soon" ? open.filter(p => p.dueDate && p.dueDate >= T && days(T,p.dueDate) <= 14) : f === "paid" ? D.pay.filter(p => outP(p) <= 0.5) : D.pay;
+  rows = rows.slice().sort((a,b)=>(a.dueDate||"").localeCompare(b.dueDate||""));
+  const cats = {}; open.forEach(p => { cats[p.category||"Other"] = (cats[p.category||"Other"]||0) + outP(p); });
+  return `
+  ${exampleBanner()}
+  <h2>Supplier payables</h2>
+  ${agingCard(D.pay, outP, "Owed to suppliers")}
+  ${Object.keys(cats).length > 1 ? `<section class="card"><h3>By category</h3><div class="stmt one" style="margin-top:6px">${Object.entries(cats).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div><span>${esc(k)}</span><b>${fm(v)}</b></div>`).join("")}</div></section>` : ""}
+  <div class="seg" role="group" aria-label="Filter">${[["open","Open"],["overdue","Overdue"],["soon","Due ≤14 days"],["paid","Paid"],["all","All"]].map(([k,l])=>`<button data-pf="${k}" aria-pressed="${f===k}">${l}</button>`).join("")}</div>
+  ${notReady("pay") ? loadingList() : rows.length ? `<div class="list">${rows.map(p => `
+    <button class="item" data-edit="pay:${esc(p.id)}"><div><div class="t">${esc(p.supplier)}${exChip(p)}</div><div class="d">${esc([p.category, p.project, p.ref].filter(Boolean).join(" · "))}</div><div style="margin-top:4px">${dueChip(p.dueDate, outP(p)<=0.5)}</div></div>
+    <div class="amt">${fm(outP(p) > 0.5 ? outP(p) : N(p.amount))}<small>${outP(p) > 0.5 ? (N(p.paid) ? "of "+fm(N(p.amount)) : "due "+fdate(p.dueDate)) : "paid"}</small></div></button>`).join("")}</div>`
+    : emptyState(D.pay.length ? "Nothing in this filter." : "No supplier bills yet. Add contractor certificates, material invoices and consultant fees.", D.pay.length ? null : "pay")}`;
+}
+
+function taxStatusChip(t){
+  if(t.status === "Paid") return chip("Paid","good");
+  if(t.status === "Filed") return chip("Filed","good");
+  const d = t.dueDate ? days(T,t.dueDate) : 99;
+  if(d < 0) return chip((t.status||"To do")+" · "+(-d)+"d late","bad");
+  if(d <= 14) return chip((t.status||"To do")+" · "+d+"d left","warn");
+  return chip(t.status || "To do");
+}
+function viewTax(){
+  const f = ui.taxF;
+  const all = D.tax.slice().sort((a,b)=>(a.dueDate||"").localeCompare(b.dueDate||""));
+  const open = all.filter(t => t.status !== "Paid" && t.status !== "Filed");
+  const rows = f === "upcoming" ? open : f === "done" ? all.filter(t => t.status === "Paid" || t.status === "Filed").reverse() : all;
+  const next = open[0];
+  const byType = {}; open.forEach(t => { byType[t.taxType||"Other"] = (byType[t.taxType||"Other"]||0) + 1; });
+  return `
+  ${exampleBanner()}
+  <h2>Tax compliance</h2>
+  ${next ? `<section class="card"><div class="eyebrow">Next deadline</div><div style="font-family:var(--f-display);font-size:20px;font-weight:700;margin-top:2px">${esc(next.item)}</div><div class="row" style="margin-top:6px">${taxStatusChip(next)}<span class="note">${fdate(next.dueDate)}${N(next.amount)?" · LKR "+fm(N(next.amount)):""}</span></div>
+    <div class="note" style="margin-top:10px">${open.length} open item${open.length!==1?"s":""}: ${Object.entries(byType).map(([k,v])=>esc(k)+" "+v).join(" · ")}</div></section>` : ""}
+  <div class="seg" role="group" aria-label="Filter">${[["upcoming","Open"],["done","Filed / paid"],["all","All"]].map(([k,l])=>`<button data-tf="${k}" aria-pressed="${f===k}">${l}</button>`).join("")}</div>
+  ${notReady("tax") ? loadingList() : rows.length ? `<div class="list">${rows.map(t => `
+    <button class="item" data-edit="tax:${esc(t.id)}"><div><div class="t">${esc(t.item)}${exChip(t)}</div><div class="d">${esc([t.taxType, t.period].filter(Boolean).join(" · "))}</div><div style="margin-top:4px">${taxStatusChip(t)}</div></div>
+    <div class="amt">${N(t.amount) ? fm(N(t.amount)) : "—"}<small>${fdate(t.dueDate)}</small></div></button>`).join("")}</div>`
+    : emptyState(D.tax.length ? "Nothing in this filter." : "No tax deadlines yet.", D.tax.length ? null : "tax")}
+  <p class="note">Self-assessment calendar for Sri Lanka (Inland Revenue): income tax instalments on 15 Aug, 15 Nov, 15 Feb and 15 May; balance tax by 30 Sep; return by 30 Nov. VAT and SSCL paid by the 20th of the next month, VAT return by the 30th. WHT and APIT remitted by the 15th. Confirm each date against the IRD tax calendar.</p>`;
+}
+
+/* ---- reports ---- */
+function fyOf(month){ const [y,m] = month.split("-").map(Number); const s = m >= 4 ? y : y-1; return s+"/"+String(s+1).slice(2); }
+function plSum(rows){
+  const s = {revenue:0,cos:0,admin:0,selling:0,finance:0,other:0,tax:0}; rows.forEach(r => Object.keys(s).forEach(k => s[k] += N(r[k])));
+  s.gp = s.revenue - s.cos; s.op = s.gp - s.admin - s.selling; s.pbt = s.op - s.finance + s.other; s.pat = s.pbt - s.tax; return s;
+}
+const REPS = [["pl","Income statement"],["bs","Balance sheet"],["proj","Projects"],["units","Units"],["loans","Loans"]];
+function repHead(){
+  return `${exampleBanner()}<h2>Reports</h2><div class="seg" role="group" aria-label="Report">${REPS.map(([k,l])=>`<button data-rep="${k}" aria-pressed="${ui.rep===k}">${l}</button>`).join("")}</div>`;
+}
+function viewReports(){
+  return repHead() + ({pl:repPL, bs:repBS, proj:repProj, units:repUnits, loans:repLoans}[ui.rep] || repPL)();
+}
+function repPL(){
+  const rows = D.pl.filter(r => r.month).slice().sort((a,b)=>a.month.localeCompare(b.month));
+  if(notReady("pl")) return loadingList();
+  if(!rows.length) return emptyState("No management accounts yet. Add each month's revenue and costs from the ledger.","pl");
+  const fys = [...new Set(rows.map(r => fyOf(r.month)))].sort();
+  const fy = ui.fy && fys.includes(ui.fy) ? ui.fy : fys[fys.length-1];
+  const fr = rows.filter(r => fyOf(r.month) === fy), s = plSum(fr);
+  const line = (l,v,cls) => `<div class="${cls||""}"><span>${l}</span><span>${fm(v)}</span></div>`;
+  return `
+    ${fys.length>1?`<div class="seg" role="group" aria-label="Financial year">${fys.map(y=>`<button data-fy="${y}" aria-pressed="${y===fy}">FY ${y}</button>`).join("")}</div>`:""}
+    <section class="kpis">
+      <div class="kpi"><div class="eyebrow">Revenue</div><div class="v">${fmM(s.revenue)}</div><div class="s">FY ${fy} · ${fr.length} month${fr.length!==1?"s":""}</div></div>
+      <div class="kpi"><div class="eyebrow">Gross profit</div><div class="v">${fmM(s.gp)}</div><div class="s">${s.revenue?(s.gp/s.revenue*100).toFixed(1)+"% margin":"—"}</div></div>
+      <div class="kpi"><div class="eyebrow">Profit before tax</div><div class="v">${fmM(s.pbt)}</div><div class="s">${s.revenue?(s.pbt/s.revenue*100).toFixed(1)+"% of revenue":"—"}</div></div>
+      <div class="kpi"><div class="eyebrow">Profit after tax</div><div class="v">${fmM(s.pat)}</div><div class="s">Year to date</div></div>
+    </section>
+    <section class="card"><h3>Income statement · FY ${fy} to date</h3><div class="stmt one" style="margin-top:8px">
+      ${line("Revenue",s.revenue)}${line("Cost of sales",-s.cos,"ind")}${line("Gross profit",s.gp,"sum")}
+      ${line("Admin expenses",-s.admin,"ind")}${line("Selling & marketing",-s.selling,"ind")}${line("Operating profit",s.op,"sum")}
+      ${line("Finance cost",-s.finance,"ind")}${line("Other income",s.other,"ind")}${line("Profit before tax",s.pbt,"sum")}
+      ${line("Income tax",-s.tax,"ind")}${line("Profit after tax",s.pat,"sum")}</div></section>
+    <section class="stack"><h3>By month</h3>
+      <div class="card" style="padding:0"><div class="scroll"><table><thead><tr><th>Month</th><th>Revenue</th><th>GP</th><th>GP %</th><th>PBT</th></tr></thead><tbody>
+      ${fr.map(r => { const m = plSum([r]); return `<tr class="click" data-edit="pl:${esc(r.id)}"><td>${fmonth(r.month)}${r.example?" "+chip("Ex","ex"):""}</td><td>${fmM(m.revenue)}</td><td>${fmM(m.gp)}</td><td>${m.revenue?(m.gp/m.revenue*100).toFixed(1)+"%":"—"}</td><td class="${m.pbt<0?"neg":""}">${fmM(m.pbt)}</td></tr>`; }).join("")}
+      </tbody></table></div></div>
+      <p class="note">Tap a month to edit its figures and commentary. Financial year runs April to March.</p></section>`;
+}
+function bsTotals(b){
+  const ta = ["ppe","wip","stock","trade","otherRec","cash"].reduce((s,k)=>s+N(b[k]),0);
+  const tl = ["tradePay","advances","borrowings","taxPay","otherPay"].reduce((s,k)=>s+N(b[k]),0);
+  const te = N(b.capital) + N(b.retained);
+  const ca = N(b.stock) + N(b.trade) + N(b.otherRec) + N(b.cash) + N(b.wip);
+  const cl = N(b.tradePay) + N(b.advances) + N(b.taxPay) + N(b.otherPay);
+  return {ta, tl, te, diff: ta - tl - te, ca, cl};
+}
+function repBS(){
+  if(notReady("bs")) return loadingList();
+  const rows = D.bs.filter(b=>b.date).slice().sort((a,b)=>b.date.localeCompare(a.date));
+  if(!rows.length) return emptyState("No balance sheet yet. Add one at each month or quarter end. The form can fill cash, receivables, payables and loans from the app for you.","bs");
+  const cur = rows[0], prev = rows[1], c = bsTotals(cur), p = prev ? bsTotals(prev) : null;
+  const ln = (l,k,cls) => `<div class="${cls||"ind"}"><span>${l}</span><span>${fm(N(cur[k]))}</span>${prev?`<span>${fm(N(prev[k]))}</span>`:""}</div>`;
+  const tot = (l,a,b) => `<div class="sum"><span>${l}</span><span>${fm(a)}</span>${prev?`<span>${fm(b)}</span>`:""}</div>`;
+  const gearing = c.te ? N(cur.borrowings)/c.te : 0;
+  return `
+    <section class="kpis">
+      <div class="kpi"><div class="eyebrow">Net assets</div><div class="v">${fmM(c.ta - c.tl)}</div><div class="s">at ${fdate(cur.date)}</div></div>
+      <div class="kpi"><div class="eyebrow">Current ratio</div><div class="v">${c.cl ? (c.ca/c.cl).toFixed(2) : "—"}</div><div class="s">incl. WIP and units for sale</div></div>
+      <div class="kpi"><div class="eyebrow">Debt to equity</div><div class="v">${c.te ? gearing.toFixed(2) : "—"}</div><div class="s">Bank borrowings ÷ equity</div></div>
+      <div class="kpi"><div class="eyebrow">Check</div><div class="v ${Math.abs(c.diff)>1?"neg":""}">${Math.abs(c.diff)>1 ? fmM(c.diff) : "Balances"}</div><div class="s">${Math.abs(c.diff)>1 ? "Assets ≠ liabilities + equity" : "Assets = liabilities + equity"}</div></div>
+    </section>
+    <button class="card" style="text-align:left;width:100%;display:block" data-edit="bs:${esc(cur.id)}">
+      <div class="spread"><h3>Statement of financial position${exChip(cur)}</h3><span class="note">Tap to edit</span></div>
+      <div class="stmt" style="margin-top:8px">
+        <div class="hd"><span></span><span>${fdate(cur.date)}</span>${prev?`<span>${fdate(prev.date)}</span>`:""}</div>
+        ${ln("Property, plant & equipment","ppe")}${ln("Development work in progress","wip")}${ln("Completed units held for sale","stock")}${ln("Trade receivables","trade")}${ln("Other receivables & prepayments","otherRec")}${ln("Cash & bank","cash")}
+        ${tot("Total assets",c.ta,p&&p.ta)}
+        ${ln("Trade payables","tradePay")}${ln("Customer advances","advances")}${ln("Bank borrowings","borrowings")}${ln("Tax payable","taxPay")}${ln("Other payables & accruals","otherPay")}
+        ${tot("Total liabilities",c.tl,p&&p.tl)}
+        ${ln("Stated capital","capital")}${ln("Retained earnings","retained")}
+        ${tot("Total equity",c.te,p&&p.te)}
+      </div></button>
+    ${rows.length>1?`<section class="stack"><h3>Earlier balance sheets</h3><div class="list">${rows.slice(1).map(b=>`<button class="item" data-edit="bs:${esc(b.id)}"><div><div class="t">${fdate(b.date)}${exChip(b)}</div></div><div class="amt">${fmM(bsTotals(b).ta-bsTotals(b).tl)}<small>net assets</small></div></button>`).join("")}</div></section>`:""}`;
+}
+function projCard(p){
+  const s = projStats(p), cp = pct(s.cost, s.budget), margin = s.salesValue - s.budget;
+  return `<button class="card" style="text-align:left;width:100%;display:block" data-proj="${esc(p.name)}">
+    <div class="spread"><h3>${esc(p.name)}${exChip(p)}</h3>${chip(p.status||"—", p.status==="Sold out"||p.status==="Completed"?"good":p.status==="Under construction"?"warn":"")}</div>
+    <div class="pm">
+      <div><div class="spread"><span class="l">Units sold${s.auto.units?AUTO:""}</span><span class="n">${fm(s.sold)} / ${fm(s.units)}</span></div><div class="prog"><span style="width:${pct(s.sold,s.units)}%"></span></div></div>
+      <div><div class="spread"><span class="l">Collected${s.auto.collected?AUTO:""}</span><span class="n">${fmM(s.collected)} / ${fmM(s.salesValue)}</span></div><div class="prog"><span style="width:${pct(s.collected,s.salesValue)}%"></span></div></div>
+      <div><div class="spread"><span class="l">Cost to date${s.auto.cost?AUTO:""}</span><span class="n">${fmM(s.cost)} / ${fmM(s.budget)}</span></div><div class="prog ${cp>100?"bad":cp>90?"warn":""}"><span style="width:${Math.min(cp,100)}%"></span></div></div>
+      <div><div class="spread"><span class="l">Bank loan${s.auto.loan?AUTO:""}</span><span class="n">${fmM(s.loanOut)} / ${fmM(s.facility)}</span></div><div class="prog"><span style="width:${pct(s.loanOut,s.facility)}%"></span></div></div>
+      <div><span class="l">Expected margin</span><div class="n">${s.salesValue&&s.budget?`LKR ${fmM(margin)} (${(margin/s.salesValue*100).toFixed(1)}%)`:"—"}</div></div>
+      <div><span class="l">${s.auto.units?"Unsold stock value":"Still to collect"}</span><div class="n">LKR ${fmM(s.auto.units ? s.stock : Math.max(0,s.salesValue-s.collected))}</div></div>
+    </div></button>`;
+}
+function repProj(){
+  if(ui.proj) return projDetail(ui.proj);
+  if(notReady("projects")) return loadingList();
+  const P = D.projects.slice().sort((a,b)=>(a.name||"").localeCompare(b.name||""));
+  return P.length ? `<p class="note" style="margin:0">Figures marked <span class="auto" style="margin:0">auto</span> come from the unit register, customer receipts, cost budget and loans. Tap a project for detail.</p>${P.map(projCard).join("")}` : emptyState("No projects yet.","projects");
+}
+function projDetail(name){
+  const p = D.projects.find(x => x.name === name) || {name};
+  const s = projStats(p), lines = D.costs.filter(c => c.project === name).sort((a,b)=>(a.head||"").localeCompare(b.head||""));
+  const us = D.units.filter(u => u.project === name), ln = D.loans.filter(l => l.project === name);
+  const st = {}; us.forEach(u => st[u.status||"Available"] = (st[u.status||"Available"]||0)+1);
+  const tb = sum(lines,c=>N(c.budget)), ta = sum(lines,c=>N(c.actual)), tc = sum(lines,c=>N(c.committed));
+  return `<div class="spread"><button class="back" data-act="projback">‹ All projects</button>${p.id?`<button class="btn small" data-edit="projects:${esc(p.id)}">Edit project</button>`:""}</div>
+    <h3 style="font-size:20px">${esc(name)}</h3>
+    ${p.note?`<p class="note" style="margin:0">${esc(p.note)}</p>`:""}
+    <section class="stack"><div class="spread"><h3>Cost budget</h3>${canWrite?`<button class="btn small" data-add="costs" data-preset="${esc(name)}">Add cost line</button>`:""}</div>
+      ${lines.length ? `<div class="card" style="padding:0"><div class="scroll"><table><thead><tr><th>Cost head</th><th>Budget</th><th>Spent</th><th>Committed</th><th>To complete</th><th>Used</th></tr></thead><tbody>
+        ${lines.map(c => { const tcmp = N(c.budget) - N(c.actual) - N(c.committed), u = N(c.budget) ? (N(c.actual)+N(c.committed))/N(c.budget)*100 : 0;
+          return `<tr class="click" data-edit="costs:${esc(c.id)}"><td>${esc(c.head)}${exChip(c)}</td><td>${fmM(N(c.budget))}</td><td>${fmM(N(c.actual))}</td><td>${fmM(N(c.committed))}</td><td class="${tcmp<0?"neg":""}">${fmM(tcmp)}</td><td>${u>100?chip(u.toFixed(0)+"%","bad"):u>90?chip(u.toFixed(0)+"%","warn"):u.toFixed(0)+"%"}</td></tr>`; }).join("")}
+        <tr class="tot"><td>Total</td><td>${fmM(tb)}</td><td>${fmM(ta)}</td><td>${fmM(tc)}</td><td class="${tb-ta-tc<0?"neg":""}">${fmM(tb-ta-tc)}</td><td>${tb?((ta+tc)/tb*100).toFixed(0)+"%":"—"}</td></tr>
+      </tbody></table></div></div><p class="note" style="margin:0">To complete = budget − spent − committed. Tap a line to update it.</p>`
+      : emptyState("No cost budget yet. Add a line for each cost head: land, construction, consultants, approvals, admin, marketing, finance cost.", null)}
+    </section>
+    <section class="card"><div class="spread"><h3>Units</h3><button class="btn small" data-units="${esc(name)}">Open register</button></div>
+      ${us.length ? `<div class="row" style="margin-top:8px">${["Available","Reserved","Booked","Sold"].map(k=>`${uChip(k)} <b>${st[k]||0}</b>`).join(" &nbsp;")}</div>
+      <div class="pm"><div><span class="l">Sold value</span><div class="n">LKR ${fmM(s.salesValue)}</div></div><div><span class="l">Unsold stock</span><div class="n">LKR ${fmM(s.stock)}</div></div></div>` : `<p class="note">No units in the register for this project.</p>`}
+    </section>
+    <section class="card"><div class="spread"><h3>Bank loans</h3><button class="btn small" data-rep="loans">All loans</button></div>
+      ${ln.length ? `<div class="stmt one" style="margin-top:6px">${ln.map(l=>`<div><span>${esc(l.name)}</span><b>${fmM(loanOutstanding(l))} of ${fmM(N(l.facility))}</b></div>`).join("")}</div>` : `<p class="note">No loans recorded for this project.</p>`}
+    </section>`;
+}
+function repUnits(){
+  if(notReady("units")) return loadingList();
+  const projs = [...new Set(D.units.map(u=>u.project).filter(Boolean))].sort();
+  if(!projs.length) return emptyState("No units yet. Add each apartment with its size and price, then book it to a buyer.","units");
+  const pj = ui.uProj && projs.includes(ui.uProj) ? ui.uProj : projs[0];
+  const all = D.units.filter(u => u.project === pj);
+  const list = (ui.uF === "all" ? all : all.filter(u => (u.status||"Available") === ui.uF))
+    .slice().sort((a,b)=> N(a.floor)-N(b.floor) || String(a.unit).localeCompare(String(b.unit), undefined, {numeric:true}));
+  const sold = all.filter(isSold), sqSold = sum(sold,u=>N(u.sqft)), sqAll = sum(all,u=>N(u.sqft));
+  return `
+    ${projs.length>1?`<div class="seg" role="group" aria-label="Project">${projs.map(p=>`<button data-uproj="${esc(p)}" aria-pressed="${p===pj}">${esc(p)}</button>`).join("")}</div>`:""}
+    <section class="kpis">
+      <div class="kpi"><div class="eyebrow">Units sold</div><div class="v">${sold.length} / ${all.length}</div><div class="s">${fm(sqSold)} of ${fm(sqAll)} sq.ft</div></div>
+      <div class="kpi"><div class="eyebrow">Sold value</div><div class="v">${fmM(sum(sold,unitPrice))}</div><div class="s">${sqSold?"avg LKR "+fm(sum(sold,unitPrice)/sqSold)+"/sq.ft":"—"}</div></div>
+      <div class="kpi"><div class="eyebrow">Unsold value</div><div class="v">${fmM(sum(all.filter(u=>!isSold(u)),unitPrice))}</div><div class="s">at list price</div></div>
+      <div class="kpi"><div class="eyebrow">Collected</div><div class="v">${fmM(sum(D.recv.filter(r=>r.project===pj),r=>N(r.received)))}</div><div class="s">from buyers to date</div></div>
+    </section>
+    <div class="seg" role="group" aria-label="Status">${["all","Available","Reserved","Booked","Sold"].map(k=>`<button data-uf="${k}" aria-pressed="${ui.uF===k}">${k==="all"?"All":k} ${k==="all"?all.length:all.filter(u=>(u.status||"Available")===k).length}</button>`).join("")}</div>
+    ${list.length ? `<div class="ugrid">${list.map(u => `<button class="ucard ${esc(u.status||"Available")}" data-edit="units:${esc(u.id)}">
+      <span class="u">${esc(u.unit)}${uChip(u.status)}</span>
+      <span class="m">${u.sqft?fm(N(u.sqft))+" sq.ft":""}${u.floor?" · Fl "+esc(u.floor):""}</span>
+      <span class="m" style="color:var(--fg);font-weight:600">LKR ${fmM(unitPrice(u))}</span>
+      <span class="m">${isSold(u) ? esc(u.customer||"Buyer not set") : "&nbsp;"}</span></button>`).join("")}</div>`
+      : `<div class="list"><div class="empty">No units with this status.</div></div>`}
+    <p class="note">Tap a unit to book it. Set the buyer, booking date, booking % and instalment plan, then "Save and create payment schedule" puts every instalment into Customers.</p>`;
+}
+function repLoans(){
+  if(notReady("loans")) return loadingList();
+  if(!D.loans.length) return emptyState("No bank loans yet. Add each facility with its rate, grace period and drawdowns; repayments and interest flow into the cash forecast.","loans");
+  return D.loans.slice().sort((a,b)=>(a.name||"").localeCompare(b.name||"")).map(l => {
+    const s = loanSched(l), out = loanOutstanding(l), next = s.rows.find(r => r.date >= T);
+    const totInt = sum(s.rows, r=>r.interest), upcoming = s.rows.filter(r => r.date >= T).slice(0,12);
+    return `<section class="card stack">
+      <button style="all:unset;cursor:pointer;display:block" data-edit="loans:${esc(l.id)}"><div class="spread"><h3>${esc(l.name)}${exChip(l)}</h3>${chip(l.status||"—", l.status==="Settled"?"good":l.status==="Repaying"||l.status==="Drawing"?"acc":"")}</div>
+      <div class="note">${esc([l.bank, l.project, N(l.rate)+"% a year", N(l.graceMonths)+" months grace", N(l.repayMonths)+" months repayment"].filter(Boolean).join(" · "))}</div></button>
+      <div class="pm" style="margin-top:0">
+        <div><div class="spread"><span class="l">Drawn</span><span class="n">${fmM(s.drawn)} / ${fmM(N(l.facility))}</span></div><div class="prog"><span style="width:${pct(s.drawn,N(l.facility))}%"></span></div></div>
+        <div><span class="l">Outstanding today</span><div class="n">LKR ${fm(out)}</div></div>
+        <div><span class="l">Next payment</span><div class="n">${next ? fdate(next.date)+" · "+fmM(next.payment) : "—"}</div></div>
+        <div><span class="l">Total interest</span><div class="n">${s.rows.length ? "LKR "+fmM(totInt) : "—"}</div></div>
+      </div>
+      ${upcoming.length ? `<div class="scroll"><table><thead><tr><th>Due</th><th>Interest</th><th>Principal</th><th>Payment</th><th>Balance</th></tr></thead><tbody>
+        ${upcoming.map(r=>`<tr><td>${fdate(r.date)}</td><td>${fmM(r.interest)}</td><td>${fmM(r.principal)}</td><td><b>${fmM(r.payment)}</b></td><td>${fmM(r.bal)}</td></tr>`).join("")}
+      </tbody></table></div><p class="note" style="margin:0">Next ${upcoming.length} payments. Interest is monthly on the drawn balance; principal is repaid in equal monthly amounts after the grace period. Assumes payments are made on schedule.</p>`
+      : `<p class="note" style="margin:0">Add drawdowns (date and amount) to see the repayment schedule.${l.inForecast==="No"?"":" Future drawdowns and payments go into the cash forecast."}</p>`}
+    </section>`; }).join("");
+}
+
+/* ---- new project: 65 St Lawrence ---- */
+let FEAS_READY = false;
+const P65 = "65 St Lawrence";
+const f1 = n => !N(n) ? "–" : (n < 0 ? "−" : "") + Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:1,maximumFractionDigits:1});
+const f1c = n => `<td class="${n<0?"neg":""}">${f1(n)}</td>`;
+function p65Card(){
+  if(!FEAS) return "";
+  const p = D.projects.find(x => x.name === P65) || {};
+  return `<button class="card" style="text-align:left;width:100%;display:block" data-go="p65">
+    <div class="spread"><h3>New project: 65 St Lawrence</h3>${chip(p.status||"Planning","warn")}</div>
+    <div class="pm"><div><span class="l">Sales value</span><div class="n">LKR 2,227.5m</div></div><div><span class="l">Total cost</span><div class="n">LKR 1,839.5m</div></div><div><span class="l">Profit after tax</span><div class="n">LKR 271.6m (12.2%)</div></div><div><span class="l">Start / completion</span><div class="n">Jan 2027 / Jan 2031</div></div></div>
+    <div class="note" style="margin-top:8px">Projections from the HNB submission, not actuals. Tap for the full detail.</div></button>`;
+}
+function p65Legend(items){ return `<div class="chart-legend">${items.map(([c,l,ln])=>`<span><i class="${ln?"ln":""}" style="background:${c}"></i>${esc(l)}</span>`).join("")}</div>`; }
+function p65Chart(F, bars, line, label){
+  const n = 19, W = 640, H = 270, L = 62, R = 10, Tp = 12, B = 30;
+  const labs = F.quarters.slice(0,n), series = bars.map(b => b.v.slice(0,n)), lv = line.v.slice(0,n);
+  const all = series.flat().concat(lv, [0]);
+  const niceStep = r => { const p = Math.pow(10, Math.floor(Math.log10(r/4))); const m = r/4/p; return (m<=1?1:m<=2?2:m<=5?5:10)*p; };
+  const rawMin = Math.min(...all), rawMax = Math.max(...all), st = niceStep(rawMax-rawMin);
+  const mn = Math.floor(rawMin/st)*st, mx = Math.ceil(rawMax/st)*st;
+  const y = v => Tp + (H-Tp-B)*(1-(v-mn)/(mx-mn)), band = (W-L-R)/n, x = i => L + band*i;
+  let g = ""; for(let v=mn; v<=mx+1e-6; v+=st) g += `<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="${v===0?"var(--muted)":"var(--line)"}" stroke-width="1"/><text x="${L-8}" y="${y(v)+5}" text-anchor="end" font-size="14" fill="var(--muted)">${fm(v)}</text>`;
+  const bw = band*0.76/bars.length;
+  let r = ""; series.forEach((s,si) => s.forEach((v,i) => { if(!v) return; const y0 = y(Math.max(v,0)), h = Math.abs(y(v)-y(0)); r += `<rect x="${x(i)+band*0.12+bw*si}" y="${y0}" width="${bw}" height="${Math.max(h,1)}" rx="1" fill="${bars[si].c}"/>`; }));
+  const pts = lv.map((v,i)=>`${x(i)+band/2},${y(v)}`).join(" ");
+  let lb = ""; labs.forEach((l,i)=>{ if(i%3===0) lb += `<text x="${x(i)+band/2}" y="${H-8}" text-anchor="middle" font-size="14" fill="var(--muted)">${esc(l)}</text>`; });
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(label)}">${g}${r}<polyline points="${pts}" fill="none" stroke="${line.c}" stroke-width="2.5" stroke-linejoin="round"/>${lb}</svg>`;
+}
+function p65Table(F, rows, totalCol, fmt){
+  const fv = (r,v) => r.f==="p" ? `<td>${v.toFixed(1)}%</td>` : r.f==="u" ? `<td>${v?v:"–"}</td>` : (fmt?fmt(v):f1c(v));
+  return `<div class="card" style="padding:0"><div class="scroll"><table class="qt"><thead><tr><th>LKR mn</th>${totalCol?"<th>Total</th>":""}${F.quarters.map((q,i)=>`<th>Q${i}<br>${esc(q)}</th>`).join("")}</tr></thead><tbody>
+    ${rows.map(r => `${r.h?`<tr class="grp"><td>${esc(r.h)}</td><td colspan="${F.quarters.length+(totalCol?1:0)}"></td></tr>`:""}<tr class="${r.sum?"sumr":""}"><td>${esc(r.l)}${r.units!==undefined?` · ${r.units} units`:""}</td>${totalCol?(r.t===null||r.t===undefined?"<td></td>":r.f==="u"?`<td>${r.t}</td>`:f1c(r.t)):""}${r.v.map(v=>fv(r,v)).join("")}</tr>`).join("")}
+  </tbody></table></div></div>`;
+}
+function p65Stmt(rows, heads){
+  return `<div class="card" style="padding:0"><div class="scroll"><table><thead><tr>${heads.map(h=>`<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table></div></div>`;
+}
+function p65Overview(F){
+  const p = D.projects.find(x => x.name === P65) || {}, lines = D.costs.filter(c => c.project === P65), ln = D.loans.filter(l => l.project === P65);
+  const tb = sum(lines,c=>N(c.budget)), ta = sum(lines,c=>N(c.actual));
+  const cash = k => F.cash.find(r => r.l === k);
+  return `
+  <section class="kpis">${F.glance.map(([l,v])=>`<div class="kpi"><div class="eyebrow">${esc(l)}</div><div class="v">${esc(v)}</div><div class="s">${/^[\d,.]+$/.test(v)?"LKR mn":"&nbsp;"}</div></div>`).join("")}</section>
+  <section class="card chart stack"><div><h3>Quarterly cash flow before financing</h3><div class="note">Collections from buyers against development costs, with the running total. Q0 carries the land purchase.</div></div>
+    ${p65Chart(F,[{v:cash("Collections from buyers").v,c:"var(--accent)"},{v:cash("Total development costs").v,c:"var(--bad)"}],{v:cash("Cumulative net cash flow before financing").v,c:"var(--brass)"},"Quarterly collections and development costs with cumulative net cash")}
+    ${p65Legend([["var(--accent)","Collections"],["var(--bad)","Development costs"],["var(--brass)","Cumulative net cash",1]])}<div class="note">LKR mn. Quarters ending Jan 2027 to Jul 2031.</div></section>
+  <section class="card chart stack"><div><h3>Cash in hand against the term loan</h3><div class="note">Quarter-end project cash and term loan outstanding, before income tax.</div></div>
+    ${p65Chart(F,[{v:cash("Closing cash (before income tax)").v,c:"var(--accent)"}],{v:cash("Term loan outstanding").v,c:"var(--brass)"},"Quarter-end project cash and term loan outstanding")}
+    ${p65Legend([["var(--accent)","Closing cash"],["var(--brass)","Term loan outstanding",1]])}<div class="note">LKR mn. Quarters ending Jan 2027 to Jul 2031.</div></section>
+  <section class="stack"><h3>Points to settle</h3><div class="alerts">${F.checks.map((c,i)=>`<div class="alert ${i<2?"warn":""}"><span class="bar"></span><span><span class="t">${esc(c[0])}</span><span class="d">${esc(c[1])}</span></span></div>`).join("")}</div></section>
+  <section class="card stack"><div class="spread"><h3>Records in the app</h3>${p.id?`<button class="btn small" data-edit="projects:${esc(p.id)}">Edit project</button>`:""}</div>
+    <div class="stmt one"><div><span>Status</span><b>${esc(p.status||"Planning")}</b></div><div><span>Units sold</span><b>${fm(N(p.unitsSold))} of ${fm(N(p.units))}</b></div><div><span>Cost budget (${lines.length} lines)</span><b>${fm(tb)}</b></div><div><span>Spent to date</span><b>${fm(ta)}</b></div>
+    ${ln.map(l=>`<div><span>${esc(l.name)}</span><b>${esc(l.status||"")} · ${fm(N(l.facility))}</b></div>`).join("")}</div>
+    <div class="row"><button class="btn small" data-rep="proj">All projects</button><button class="btn small" data-rep="loans">Loans</button></div>
+    ${p.note?`<p class="note" style="margin:0">${esc(p.note)}</p>`:""}</section>`;
+}
+function p65Assumptions(F){
+  return F.assumptions.map(g=>`<section class="card"><h3>${esc(g.g)}</h3><div style="margin-top:6px">${g.r.map(r=>`<div class="asm"><div class="an">${r[0]}. ${esc(r[1])}</div><div class="av">${esc(r[2])}</div><div class="ab">${esc(r[3])}</div></div>`).join("")}</div></section>`).join("")+`
+  <section class="card"><h3>F. Basis of preparation</h3><div class="stmt one" style="margin-top:6px">${F.basis.map(b=>`<div style="grid-template-columns:minmax(0,1fr)"><span><b>${esc(b[0])}.</b> <span class="note" style="font-size:13px">${esc(b[1])}</span></span></div>`).join("")}</div></section>
+  <section class="card"><h3>G. Definitions of key ratios</h3><div class="stmt one" style="margin-top:6px">${F.ratios.map(b=>`<div style="grid-template-columns:minmax(0,1fr)"><span><b>${esc(b[0])}: ${esc(b[1])}.</b> <span class="note" style="font-size:13px">${esc(b[2])}</span></span></div>`).join("")}</div></section>`;
+}
+function p65Costs(F){
+  const su = (r) => `<tr class="${r[3]?"tot":""}"><td style="white-space:normal">${esc(r[0])}</td><td>${f1(r[1])}</td><td>${esc(r[2])}</td></tr>`;
+  const kv = rows => `<div class="stmt one" style="margin-top:6px">${rows.map(r=>`<div><span>${esc(r[0])}</span><b>${esc(r[1])}</b></div>`).join("")}</div>`;
+  return `<section class="stack"><h3>Uses of funds</h3>${p65Stmt(F.uses.map(su),["LKR mn","Amount","% of total"])}</section>
+  <section class="stack"><h3>Sources of funds</h3>${p65Stmt(F.sources.map(su),["LKR mn","Amount","% of total"])}</section>
+  <section class="stack"><h3>Projected profit and loss</h3>${p65Stmt(F.pl.map(r=>`<tr class="${r[4]?"tot":""}"><td style="white-space:normal">${esc(r[0])}</td><td class="${r[1]<0?"neg":""}">${f1(r[1])}</td><td>${esc(r[2])}</td><td class="${r[3]<0?"neg":""}">${fm(r[3])}</td></tr>`),["LKR mn","Amount","% of revenue","LKR per sq.ft"])}</section>
+  <section class="card"><h3>Key indicators</h3>${kv(F.indicators)}<p class="note" style="margin:8px 0 0">The 0 quarters of negative cash flow is as stated in the submission; see Points to settle on the Overview.</p></section>
+  <section class="card"><h3>Proposed bank facility</h3>${kv(F.facility)}<p class="note" style="margin:8px 0 0">Security: ${esc(F.security)}</p></section>`;
+}
+function p65Sales(F){
+  return `<section class="stack"><h3>Units booked</h3>${p65Table(F,F.sales,true)}<p class="note" style="margin:0">Management assumption: 5 pre-booked units, 3 a quarter to Q9, then 2 a quarter to Q15 (sold out before completion).</p></section>
+  <section class="stack"><h3>Collections by booking quarter</h3>${p65Table(F,F.collections.map(r=>r.sum?r:Object.assign({},r,{t:sum(r.v,v=>v)})),true)}<p class="note" style="margin:0">Buyer plan: 50% booking advance, 40% equal quarterly instalments until completion, 10% on handover split over two quarters.</p></section>`;
+}
+function p65Cash(F){
+  const yrs = ["2027","2028","2029","2030","2031","2032"];
+  return `<section class="stack"><h3>Quarterly project cash flow</h3>${p65Table(F,F.cash,true)}<p class="note" style="margin:0">Interest is charged monthly on opening balances; any shortfall is drawn on the overdraft and surplus cash repays it first.</p></section>
+  <section class="stack"><h3>Cash cover ratio by quarter</h3>${p65Table(F,[{l:"(Opening cash + A) ÷ B",v:F.cover}],false,v=>`<td>${v?v.toFixed(2)+"x":"–"}</td>`)}<p class="note" style="margin:0">Minimum 7.04x in the repayment quarters. Overall DSCR over the project life 1.45x.</p></section>
+  <section class="stack"><h3>Annual summary</h3><p class="note" style="margin:0">Calendar year, by quarters ending in that year.</p>${p65Stmt(F.annual.map(r=>`<tr><td style="white-space:normal">${esc(r.l)}</td>${r.v.map(f1c).join("")}${r.t===null?"<td></td>":f1c(r.t)}</tr>`),["LKR mn"].concat(yrs,["Total"]))}</section>`;
+}
+function p65Vat(F){
+  return `<section class="stack"><h3>VAT and SSCL by quarter</h3>${p65Table(F,F.vat,true)}<p class="note" style="margin:0">Output tax on collections (land share exempt); input VAT on the eligible share of construction cost; excess credit carried forward.</p></section>
+  <section class="card"><h3>Whole project</h3><div class="stmt one" style="margin-top:6px">${F.vatWhole.map(r=>`<div class="${r[2]?"sum":""}"><span>${esc(r[0])}</span><span>${f1(r[1])}</span></div>`).join("")}<div><span>Net VAT & SSCL as % of revenue</span><span>${esc(F.vatPct)}</span></div></div></section>`;
+}
+function p65Sens(F){
+  const tb = (rows, fn) => `<div class="card" style="padding:0"><div class="scroll"><table class="sens"><thead><tr><th>Cost ↓ / Price →</th>${F.sensCols.map(c=>`<th>${esc(c)}</th>`).join("")}</tr></thead><tbody>${rows.map((r,i)=>`<tr><td>${esc(F.sensRows[i])}</td>${r.map((v,j)=>`<td class="${i===2&&j===2?"base":""}">${fn(v)}</td>`).join("")}</tr>`).join("")}</tbody></table></div></div>`;
+  return `<p class="note" style="margin:0">If selling price and construction cost move. Interest held at the base case; VAT & SSCL and input VAT move with price and cost. The highlighted cell is the base case.</p>
+  <section class="stack"><h3>Profit after tax (LKR mn)</h3>${tb(F.sensPat,v=>f1(v))}</section>
+  <section class="stack"><h3>Net profit margin</h3>${tb(F.sensMargin,v=>esc(v))}</section>`;
+}
+function viewP65(){
+  const F = FEAS;
+  if(!F) return `<h2>65 St Lawrence</h2><div class="list"><div class="empty">${FEAS_READY || connState==="offline" ? "The project figures aren't available here." : "Loading the project figures…"}</div></div>`;
+  const tabs = [["over","Overview",p65Overview],["asm","Assumptions",p65Assumptions],["cost","Costs & profit",p65Costs],["sales","Sales",p65Sales],["cash","Cash flow",p65Cash],["vat","VAT & SSCL",p65Vat],["sens","Sensitivity",p65Sens]];
+  const cur = tabs.find(t => t[0] === ui.p65) || tabs[0];
+  return `<section class="hero" style="border-left-color:var(--brass)">
+      <div class="eyebrow">New project · projections, not actuals</div>
+      <div class="big" style="font-size:28px">65 St Lawrence Road</div>
+      <div class="meta">${esc(F.summary)}</div>
+      <div class="meta">Submitted to ${esc(F.submittedTo)}, ${esc(F.dated)}. ${esc(F.facilityLine)}. LKR million unless stated.</div>
+    </section>
+    <div class="seg" role="group" aria-label="Project section">${tabs.map(t=>`<button data-p65s="${t[0]}" aria-pressed="${t===cur}">${t[1]}</button>`).join("")}</div>
+    ${cur[2](F)}
+    <p class="note" style="margin:0">Source: ${esc(F.source)}. Marked confidential, prepared for the bank. Projections are management assumptions, not a guarantee of future performance.</p>`;
+}
+/* ---- forecast financial statements ---- */
+let FFS = null;
+const fN = n => !N(n) ? "–" : (n<0?"("+fm(-n)+")":fm(n));
+function ffsCard(){
+  if(!FFS) return "";
+  return `<button class="card" style="text-align:left;width:100%;display:block" data-go="p65" data-f="ffs">
+    <div class="spread"><h3>Forecast 2026/27: 26B and 29</h3>${chip("Forecast")}</div>
+    <div class="pm"><div><span class="l">Income</span><div class="n">LKR 975.9m</div></div><div><span class="l">Gross profit</span><div class="n">LKR 405.7m</div></div><div><span class="l">Profit after tax</span><div class="n">LKR 267.1m</div></div><div><span class="l">Due from customers</span><div class="n">LKR 909.1m</div></div></div>
+    <div class="note" style="margin-top:8px">Forecast for the year to 31 March 2027, not actuals. Tap for the statements.</div></button>`;
+}
+function ffsRows(rows, two){
+  return rows.map(r => r.h ? `<tr class="grp"><td style="white-space:normal">${esc(r.h)}</td><td colspan="${two?3:1}"></td></tr>` : two
+    ? `<tr class="${r[4]?"sumr":""}"><td style="white-space:normal">${esc(r[0])}</td><td>${esc(r[1])}</td><td class="${r[2]<0?"neg":""}">${fN(r[2])}</td><td class="${r[3]<0?"neg":""}">${fN(r[3])}</td></tr>`
+    : `<tr class="${r[2]?"sumr":""}"><td style="white-space:normal">${esc(r[0])}</td><td class="${r[1]<0?"neg":""}">${fN(r[1])}</td></tr>`).join("");
+}
+function viewFFS(){
+  const F = FFS;
+  if(!F) return `<div class="list"><div class="empty">${FEAS_READY || connState==="offline" ? "The forecast statements aren't available here." : "Loading the forecast statements…"}</div></div>`;
+  const tabs = [["sum","Summary"],["pl","Income statement"],["bs","Financial position"],["proj","By project"],["notes","Notes"]];
+  const cur = (tabs.find(t=>t[0]===ui.ffs)||tabs[0])[0];
+  const stmt = rows => `<div class="card" style="padding:0"><div class="scroll"><table class="qt"><thead><tr><th>Rs.</th><th>Note</th><th>2027 Forecast</th><th>2026 Actual</th></tr></thead><tbody>${ffsRows(rows,true)}</tbody></table></div></div>`;
+  let body = "";
+  if(cur==="sum") body = `<section class="kpis">${[["Income","975.9m","2026: 478.3m"],["Gross profit","405.7m","41.6% of income"],["Profit before tax","383.4m","2026: 81.2m"],["Profit after tax","267.1m","2026: 55.6m"],["Total assets","981.0m","2026: 410.6m"],["Cash at 31 Mar 2027","843.9m","plus 102.4m fixed deposits"],["Due from customers","909.1m","received in full in the year"],["Trade & other payable","449.7m","includes costs to complete"]].map(([l,v,s])=>`<div class="kpi"><div class="eyebrow">${l}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join("")}</section>
+    <section class="stack"><h3>Points to note</h3><div class="alerts">${F.points.map(c=>`<div class="alert warn"><span class="bar"></span><span><span class="t">${esc(c[0])}</span><span class="d">${esc(c[1])}</span></span></div>`).join("")}</div></section>`;
+  if(cur==="pl") body = `<section class="stack"><h3>Forecast comprehensive income</h3>${stmt(F.pl)}</section>`;
+  if(cur==="bs") body = `<section class="stack"><h3>Forecast financial position at 31 March 2027</h3>${stmt(F.bs)}</section>`;
+  if(cur==="proj") body = `<section class="stack"><h3>26B Nelson and 29 St Lawrence</h3><div class="card" style="padding:0"><div class="scroll"><table class="qt"><thead><tr><th>Rs.</th><th>26B Nelson</th><th>29 St Lawrence</th><th>Total</th></tr></thead><tbody>${F.projects.rows.map(r=>`<tr class="${r[3]?"sumr":""}"><td style="white-space:normal">${esc(r[0])}</td><td class="${r[1]<0?"neg":""}">${fN(r[1])}</td><td class="${r[2]<0?"neg":""}">${fN(r[2])}</td><td class="${r[1]<0?"neg":""}">${fN(r[1]+r[2])}</td></tr>`).join("")}</tbody></table></div></div>
+    <p class="note" style="margin:0">Remaining units when the forecast was prepared: ${F.projects.remain.map(esc).join("; ")}. Budget and cost to date also show under Reports → Projects.</p></section>`;
+  if(cur==="notes") body = F.notes.map(n=>`<section class="stack"><h3>Note ${esc(n.n)}: ${esc(n.t)}</h3><div class="card" style="padding:0"><div class="scroll"><table class="qt"><thead><tr><th>Rs.</th><th>2027</th></tr></thead><tbody>${ffsRows(n.r,false)}</tbody></table></div></div>${n.x?`<p class="note" style="margin:0">${esc(n.x)}</p>`:""}</section>`).join("");
+  return `<section class="hero" style="border-left-color:var(--brass)"><div class="eyebrow">26B Nelson and 29 St Lawrence · forecast, not actuals</div><div class="big" style="font-size:28px">Forecast financial statements 2026/27</div><div class="meta">Nexus Property Developers (Pvt) Ltd. ${esc(F.period)}.</div></section>
+    <div class="seg" role="group" aria-label="Forecast section">${tabs.map(t=>`<button data-ffs="${t[0]}" aria-pressed="${t[0]===cur}">${t[1]}</button>`).join("")}</div>
+    ${body}
+    <p class="note" style="margin:0">Source: ${esc(F.source)}. The 2026 column is as shown in the forecast; small differences from the audited statements come from accruals.</p>`;
+}
+function viewForecasts(){
+  const sec = ui.fsec === "ffs" ? "ffs" : "p65";
+  return `<h2>Forecasts</h2><div class="seg" role="group" aria-label="Forecast type">${[["p65","New project: 65 St Lawrence"],["ffs","Forecast FS 2026/27"]].map(([k,l])=>`<button data-fsec="${k}" aria-pressed="${k===sec}">${l}</button>`).join("")}</div>${sec==="ffs"?viewFFS():viewP65()}`;
+}
+
+/* ---------- render ---------- */
+function render(){
+  renderTabs();
+  const V = {home:viewHome, cash:viewCash, recv:viewRecv, pay:viewPay, tax:viewTax, reports:viewReports, p65:viewForecasts}[ui.view] || viewHome;
+  $("#view").innerHTML = V();
+  const fb = fabFor(), fab = $("#fab");
+  if(fb && canWrite){ fab.hidden = false; fab.dataset.add = fb[0]; if(fb[0]==="costs") fab.dataset.preset = ui.proj; else delete fab.dataset.preset; $("#fablbl").textContent = fb[1]; } else fab.hidden = true;
+  resolveNames();
+}
+function go(v, f){
+  ui.view = v; if(f){ if(v==="recv") ui.recvF=f; if(v==="pay") ui.payF=f; if(v==="tax") ui.taxF=f; if(v==="reports"){ ui.rep=f; ui.proj=null; } if(v==="p65") ui.fsec=f; }
+  ls.set("nx-view", v); render(); window.scrollTo(0,0);
+}
+function toast(msg){ const r = $("#toastroot"); r.innerHTML = `<div class="toast" role="status">${esc(msg)}</div>`; clearTimeout(toast.t); toast.t = setTimeout(()=>{ r.innerHTML=""; }, 2600); }
+
+/* ---------- writes ---------- */
+function stamp(prev, data, what){
+  const log = (Array.isArray(prev && prev.log) ? prev.log : []).concat([{ by: uid || null, at: new Date().toISOString(), what }]).slice(-15);
+  return Object.assign(data, { updatedAt: new Date().toISOString(), updatedBy: uid || null, log });
+}
+function describeChange(col, prev, next){
+  if(!prev) return "added";
+  const ch = [];
+  S[col].fields.forEach(f => { if(f.t === "head" || f.t === "area" || f.t === "draws") return;
+    const a = prev[f.k] ?? "", b = next[f.k] ?? "";
+    if(f.t === "num" ? N(a) !== N(b) : String(a) !== String(b)) ch.push(f.t === "num" ? `${f.l.replace(/ \(LKR\)/,"")} ${fm(N(a))} → ${fm(N(b))}` : `${f.l} → ${b || "blank"}`); });
+  if(col === "loans" && JSON.stringify(prev.drawdowns||[]) !== JSON.stringify(next.drawdowns||[])) ch.push("drawdowns updated");
+  if(String(prev.note||"") !== String(next.note||"")) ch.push("notes edited");
+  return ch.length ? ch.slice(0,3).join("; ") + (ch.length > 3 ? ` (+${ch.length-3} more)` : "") : "saved, no changes";
+}
+async function writeDoc(col, id, data){ const ref = id ? db.collection(col).doc(id) : db.collection(col).doc(); await ref.set(data); return ref.id; }
+function writeErr(e){
+  return e && e.code === "quota_exceeded" ? "The tracker is full. Delete old records before adding more." :
+    e && e.code === "invalid_argument" ? "You don't have permission to change this tracker." : "Couldn't save. Check your connection and try again.";
+}
+
+/* ---------- editor sheet ---------- */
+let sheet = null;
+function fieldHTML(col, f, v, rec){
+  const id = "f-"+col+"-"+f.k;
+  if(f.t === "head") return `<div class="fld full" style="margin-top:4px"><div class="eyebrow">${esc(f.l)}</div></div>`;
+  let val = v[f.k];
+  if(val === undefined || val === null){ const d = (DEF[col]||{})[f.k]; val = rec ? "" : (d === "T" ? T : d === "M" ? T.slice(0,7) : (d ?? "")); }
+  let input;
+  if(f.t === "select") input = `<select id="${id}" name="${f.k}">${f.o.map(o=>`<option ${o===val?"selected":""}>${esc(o)}</option>`).join("")}</select>`;
+  else if(f.t === "area") input = `<textarea id="${id}" name="${f.k}">${esc(val)}</textarea>`;
+  else if(f.t === "num") input = `<input id="${id}" name="${f.k}" inputmode="decimal" autocomplete="off" value="${val===""?"":esc(fm(N(val)).replace("−","-"))}" placeholder="0">`;
+  else if(f.t === "project") input = `<input id="${id}" name="${f.k}" list="dl-proj" autocomplete="off" value="${esc(val)}">`;
+  else if(f.t === "draws"){
+    const rows = Array.isArray(val) ? val : [];
+    return `<div class="fld full"><span class="lbl">${esc(f.l)}</span><div class="stack" id="draws">${rows.map(drawRow).join("")}</div><button type="button" class="btn small" data-act="adddraw" style="align-self:flex-start">Add drawdown</button></div>`;
+  }
+  else input = `<input id="${id}" name="${f.k}" type="${f.t==="date"?"date":f.t==="month"?"month":"text"}" value="${esc(val)}">`;
+  return `<div class="fld ${f.full?"full":""}"><label for="${id}">${esc(f.l)}${f.req?" *":""}</label>${input}${f.hint?`<span class="note">${esc(f.hint)}</span>`:""}</div>`;
+}
+let drawSeq = 0;
+const drawRow = d => { const i = ++drawSeq; return `<div class="drow"><input type="date" id="dd-d-${i}" aria-label="Drawdown date" value="${esc(d&&d.date||"")}" data-dd="date"><input inputmode="decimal" id="dd-a-${i}" aria-label="Drawdown amount" placeholder="Amount" value="${d&&N(d.amount)?esc(fm(N(d.amount))):""}" data-dd="amount"><button type="button" class="btn small" data-act="rmdraw" aria-label="Remove drawdown">✕</button></div>`; };
+
+function openForm(col, id, preset){
+  const rec = id ? D[col].find(x => x.id === id) : null;
+  if(id && !rec){ toast("That record was deleted"); return; }
+  const sc = S[col]; const v = Object.assign({}, rec || {});
+  if(!rec && preset && (col === "costs" || col === "units")) v.project = preset;
+  const projects = projNames();
+  const settle = rec && ((col==="recv" && outR(rec)>0.5) || (col==="pay" && outP(rec)>0.5) || (col==="tax" && rec.status!=="Paid"));
+  const settleLbl = col==="recv" ? "Mark fully received" : col==="pay" ? "Mark fully paid" : "Mark paid today";
+  let extra = "";
+  if(col === "units"){
+    const linked = rec ? D.recv.filter(r => r.unitId === rec.id || (!r.unitId && r.project === rec.project && String(r.unit) === String(rec.unit))) : [];
+    const paidAny = linked.some(r => N(r.received) > 0);
+    extra = `<div class="sec"><h3>Payment schedule</h3>${linked.length ? `<p class="note" style="margin:0">${linked.length} instalments in Customers · LKR ${fm(sum(linked,r=>N(r.received)))} received of ${fm(sum(linked,r=>N(r.amount)))}.</p>` : `<p class="note" style="margin:0">Fill in buyer, booking date, booking %, number of instalments and first instalment date, set status to Booked or Sold, then create the schedule.</p>`}
+      <div id="schedprev"></div>
+      ${canWrite ? (paidAny ? `<p class="note" style="margin:0">Receipts are already recorded against this schedule, so it can't be replaced. Edit individual instalments in Customers.</p>`
+        : `<button type="button" class="btn" data-act="sched">${linked.length ? "Save and replace payment schedule" : "Save and create payment schedule"}</button>`) : ""}</div>`;
+  }
+  if(col === "bs" && canWrite) extra = `<div class="sec"><button type="button" class="btn" data-act="bsfill">Fill from app: cash, receivables due, payables, loans</button><p class="note" style="margin:0">Takes bank balances, instalments due by the balance sheet date and still unpaid, open supplier bills, and loan balances at that date. Review before saving.</p></div>`;
+  const hist = rec ? `<div class="sec"><h3>History</h3>${Array.isArray(rec.log) && rec.log.length ? `<div class="hist">${rec.log.slice().reverse().map(h=>`<div><span>${esc(h.what)}</span><span class="w">${who(h.by)} · ${fdate(String(h.at).slice(0,10))}</span></div>`).join("")}</div>` : `<p class="note" style="margin:0">No changes recorded since this record was set up.</p>`}</div>` : "";
+  $("#sheetroot").innerHTML = `<div class="sheet-bg" id="sheetbg"><form class="sheet" id="sheetform" role="dialog" aria-modal="true" aria-label="${rec?"Edit":"Add"} ${esc(sc.one)}" novalidate>
+    <div class="grab"></div>
+    <div class="spread"><h3>${rec?"Edit":"Add"} ${esc(sc.one)}</h3><button type="button" class="btn small" data-act="close">Close</button></div>
+    ${rec && rec.example ? `<div class="note" style="color:var(--brass)">This is an example row. Saving your changes turns it into a real record.</div>` : ""}
+    <datalist id="dl-proj">${projects.map(p=>`<option value="${esc(p)}">`).join("")}</datalist>
+    <div class="fields">${sc.fields.map(f => fieldHTML(col, f, v, rec)).join("")}</div>
+    <div class="err" id="ferr" hidden></div>
+    ${canWrite ? `<div class="row">
+      <button class="btn primary" type="submit" style="flex:1">Save</button>
+      ${settle ? `<button class="btn" type="button" data-act="settle">${settleLbl}</button>` : ""}
+    </div>` : `<p class="note">You have view-only access to this tracker.</p>`}
+    ${extra}${hist}
+    ${rec && canWrite ? `<div class="row" id="delrow"><button class="btn danger small" type="button" data-act="del">Delete</button></div>` : ""}
+  </form></div>`;
+  sheet = {col, id, rec};
+  resolveNames();
+  setTimeout(()=>{ const first = $("#sheetform input, #sheetform select"); if(first && !rec) first.focus(); }, 30);
+}
+function closeSheet(){ $("#sheetroot").innerHTML = ""; sheet = null; render(); }
+function readForm(){
+  const sc = S[sheet.col], form = $("#sheetform"), out = {};
+  for(const f of sc.fields){
+    if(f.t === "head") continue;
+    if(f.t === "draws"){ out[f.k] = [...form.querySelectorAll("#draws .drow")].map(r => ({ date: r.querySelector('[data-dd="date"]').value, amount: N(r.querySelector('[data-dd="amount"]').value) })).filter(d => d.date && d.amount > 0); continue; }
+    const el = form.elements[f.k]; let val = el ? el.value.trim() : "";
+    if(f.t === "num") val = val === "" ? 0 : N(val);
+    if(f.req && (val === "" || (f.t !== "num" && !val))) return {err: f.l+" is required."};
+    out[f.k] = val;
+  }
+  return {data: out};
+}
+function showErr(m){ const err = $("#ferr"); if(err){ err.textContent = m; err.hidden = false; } }
+async function save(after){
+  const r = readForm(); if(r.err){ showErr(r.err); return; }
+  const prev = sheet.rec, col = sheet.col;
+  const keep = {}; if(prev){ ["unitId"].forEach(k => { if(prev[k] !== undefined) keep[k] = prev[k]; }); }
+  const data = stamp(prev, Object.assign({}, keep, r.data, {example:false}), describeChange(col, prev, r.data));
+  if(after && after.check){ const m = after.check(data); if(m){ showErr(m); return; } }
+  const btns = document.querySelectorAll("#sheetform button"); btns.forEach(b=>b.disabled=true);
+  try{
+    const id = await writeDoc(col, sheet.id, data);
+    if(after && after.run) await after.run(data, id);
+    const one = S[col].one; closeSheet(); toast(after && after.msg ? after.msg : "Saved "+one);
+  }catch(e){
+    btns.forEach(b=>b.disabled=false); showErr(writeErr(e));
+    if(e && e.code === "invalid_argument"){ canWrite = false; }
+  }
+}
+const schedAfter = {
+  check(u){
+    if(!isSold(u)) return "Set the status to Booked or Sold first.";
+    if(!u.customer) return "Enter the buyer's name.";
+    if(!(unitPrice(u) > 0)) return "Enter the size and price per sq.ft, or the agreed price.";
+    if(!u.bookingDate) return "Enter the booking date.";
+    if(N(u.instalments) > 0 && !u.firstInstDate) return "Enter the first instalment date.";
+    if(N(u.bookingPct) < 0 || N(u.bookingPct) > 100) return "Booking % must be between 0 and 100.";
+    return null;
+  },
+  async run(u, id){
+    const old = D.recv.filter(r => r.unitId === id || (!r.unitId && r.project === u.project && String(r.unit) === String(u.unit)));
+    for(const r of old){ if(N(r.received) > 0) throw {code:"has_receipts"}; }
+    for(const r of old) await db.collection("recv").doc(r.id).delete();
+    const rows = buildSchedule(u);
+    for(const r of rows){
+      await writeDoc("recv", null, stamp(null, { customer:u.customer, project:u.project, unit:u.unit, ref:r.ref, dueDate:r.dueDate, amount:r.amount, received:0, unitId:id, example:false }, "created from unit "+u.unit+" payment plan"));
+    }
+    schedAfter.msg = `${rows.length} instalments added to Customers`;
+  }
+};
+async function del(){
+  try{ await db.collection(sheet.col).doc(sheet.id).delete(); closeSheet(); toast("Deleted"); }
+  catch(e){ showErr("Couldn't delete. Try again."); }
+}
+async function clearExamples(){
+  const all = []; COLS.forEach(c => D[c].forEach(x => { if(x.example) all.push([c,x.id]); }));
+  const btn = document.querySelector('[data-act="exyes"]'); if(btn){ btn.disabled = true; btn.textContent = "Removing…"; }
+  for(const [c,id] of all){ try{ await db.collection(c).doc(id).delete(); }catch(e){} }
+  toast("Examples removed");
+}
+function previewSchedule(){
+  const box = $("#schedprev"); if(!box) return;
+  const r = readForm(); if(r.err){ box.innerHTML = ""; return; }
+  const u = r.data; if(!isSold(u) || !(unitPrice(u) > 0) || !u.bookingDate || (N(u.instalments) > 0 && !u.firstInstDate)){ box.innerHTML = ""; return; }
+  const rows = buildSchedule(u);
+  box.innerHTML = `<div class="scroll"><table><thead><tr><th>Payment</th><th>Due</th><th>LKR</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${esc(x.ref)}</td><td>${fdate(x.dueDate)}</td><td>${fm(x.amount)}</td></tr>`).join("")}<tr class="tot"><td>Total</td><td></td><td>${fm(sum(rows,x=>x.amount))}</td></tr></tbody></table></div>`;
+}
+function bsFill(){
+  const f = $("#sheetform"), d = f.elements.date.value || T;
+  const set = (k, v) => { f.elements[k].value = fm(Math.round(v)).replace("−","-"); };
+  set("cash", cashAtBank());
+  set("trade", sum(D.recv.filter(r => r.dueDate && r.dueDate <= d), outR));
+  set("tradePay", sum(payOpen(), outP));
+  set("borrowings", sum(D.loans, l => loanOutstanding(l, d)));
+  toast("Filled from the app. Review, then save.");
+}
+
+/* ---------- Excel import / export ---------- */
+let XL = null, imp = null;
+function loadXLSX(){
+  if(window.XLSX) return Promise.resolve(window.XLSX);
+  return new Promise((res, rej) => { const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"; s.onload = () => res(window.XLSX); s.onerror = () => rej(new Error("load")); document.head.appendChild(s); });
+}
+const IMPORTABLE = ["recv","pay","banks","units","cash","costs","tax"];
+function openData(){
+  const can = canWrite && !!db;
+  $("#sheetroot").innerHTML = `<div class="sheet-bg" id="sheetbg"><div class="sheet" role="dialog" aria-modal="true" aria-label="Import and export">
+    <div class="grab"></div>
+    <div class="spread"><h3>Excel import &amp; export</h3><button type="button" class="btn small" data-act="close">Close</button></div>
+    <div class="sec" style="border-top:0;padding-top:0"><h3>Export</h3><p class="note" style="margin:0">One Excel workbook with a sheet for every list, the cash forecast, project summary and loan schedules. Good for auditors, the bank or month-end packs.</p>
+      ${dl ? `<button type="button" class="btn primary" data-act="export">Download Excel workbook</button>` : `<p class="note" style="margin:0">Downloads aren't available in this view.</p>`}</div>
+    ${can ? `<div class="sec"><h3>Import</h3><p class="note" style="margin:0">Bring in a list from Excel or CSV. The first row must be column headings; names like Customer, Due date, Amount, Received, Supplier, Paid, Balance are matched automatically. Dates as dd/mm/yyyy or Excel dates.</p>
+      <div class="fld"><label for="imp-col">Import into</label><select id="imp-col">${IMPORTABLE.map(c=>`<option value="${c}">${S[c].sheet}</option>`).join("")}</select></div>
+      <div class="row">${dl?`<button type="button" class="btn small" data-act="template">Download blank template</button>`:""}<button type="button" class="btn small primary" data-act="pickfile">Choose Excel or CSV file</button></div>
+      <input type="file" id="imp-file" accept=".xlsx,.xls,.csv" hidden>
+      <div id="imp-out"></div></div>` : ""}
+  </div></div>`;
+  sheet = {col:null};
+}
+const norm = s => String(s||"").toLowerCase().replace(/\(lkr\)/g,"").replace(/[^a-z0-9]/g,"");
+const SYN = { customer:["buyer","client","customername","buyername","name"], supplier:["vendor","creditor","suppliername","contractor"], dueDate:["due","duedate","datedue","paymentdate"], amount:["amount","amountdue","invoiceamount","value","total","instalmentamount"], received:["received","amountreceived","receipts","paid","collected"], paid:["paid","amountpaid","payments","payment"], ref:["ref","reference","invoice","invoiceno","billno","instalment","description"], unit:["unit","unitno","apartment","aptno","flat"], balance:["balance","closingbalance","bookbalance"], name:["account","accountname","name"], asOf:["asat","asof","date","balancedate"], sqft:["sqft","size","area","sizesqft"], pricePerSqft:["rate","pricepersqft","ratepersqft"], price:["price","agreedprice","salesvalue","saleprice"], customerU:[], description:["description","item","details"], date:["date","expecteddate"], item:["item","whatisdue","tax"], head:["head","costhead","category"], budget:["budget"], actual:["actual","spent","spenttodate","costtodate"] };
+function matchCols(col, headers){
+  const map = {}; const used = new Set();
+  S[col].fields.forEach(f => { if(f.t === "head" || f.t === "draws") return;
+    const cands = [norm(f.l), norm(f.k)].concat(SYN[f.k] || []);
+    const h = headers.find(h => !used.has(h) && cands.includes(norm(h)));
+    if(h){ map[f.k] = h; used.add(h); } });
+  return map;
+}
+function toISO(v){
+  if(v instanceof Date && !isNaN(v)){ const d = new Date(v.getTime() + 12*36e5); return iso(d); }
+  if(typeof v === "number" && v > 20000 && v < 80000){ const d = new Date(Math.round((v - 25569) * 864e5)); return d.getUTCFullYear()+"-"+pad(d.getUTCMonth()+1)+"-"+pad(d.getUTCDate()); }
+  const s = String(v||"").trim(); let m;
+  if((m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))) return m[1]+"-"+pad(m[2])+"-"+pad(m[3]);
+  if((m = s.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})$/))){ const y = m[3].length === 2 ? "20"+m[3] : m[3]; return y+"-"+pad(m[2])+"-"+pad(m[1]); }
+  if((m = s.match(/^(\d{4})-(\d{1,2})$/))) return m[1]+"-"+pad(m[2]);
+  return "";
+}
+async function handleFile(file){
+  const out = $("#imp-out"); out.innerHTML = `<p class="note">Reading ${esc(file.name)}…</p>`;
+  try{
+    const X = await loadXLSX(); const buf = await file.arrayBuffer();
+    const wb = X.read(buf, {type:"array", cellDates:true}); const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = X.utils.sheet_to_json(ws, {defval:"", raw:true});
+    const col = $("#imp-col").value;
+    if(!rows.length){ out.innerHTML = `<p class="err">The first sheet has no rows under the headings.</p>`; return; }
+    const headers = Object.keys(rows[0]); const map = matchCols(col, headers);
+    const missing = S[col].fields.filter(f => f.req && !map[f.k]).map(f => f.l);
+    const recs = rows.map(r => { const o = {};
+      S[col].fields.forEach(f => { const h = map[f.k]; if(!h) return; const v = r[h];
+        if(f.t === "num") o[f.k] = N(v); else if(f.t === "date" || f.t === "month") o[f.k] = f.t === "month" ? toISO(v).slice(0,7) : toISO(v); else o[f.k] = String(v ?? "").trim(); });
+      (Object.entries(DEF[col]||{})).forEach(([k,d]) => { if(o[k] === undefined || o[k] === "") o[k] = d === "T" ? T : d === "M" ? T.slice(0,7) : d; });
+      return o; }).filter(o => S[col].fields.some(f => f.req && o[f.k]));
+    imp = {col, recs};
+    out.innerHTML = `<div class="stack">
+      <p class="note" style="margin:0"><b>Matched:</b> ${Object.entries(map).map(([k,h])=>`${esc(S[col].fields.find(f=>f.k===k).l)} ← “${esc(h)}”`).join(", ") || "nothing"}</p>
+      ${missing.length ? `<p class="err" style="margin:0">Missing required column${missing.length>1?"s":""}: ${missing.map(esc).join(", ")}. Rename the heading in Excel to match and try again.</p>` : ""}
+      ${recs.length ? `<div class="scroll"><table><thead><tr>${Object.keys(map).slice(0,5).map(k=>`<th>${esc(S[col].fields.find(f=>f.k===k).l)}</th>`).join("")}</tr></thead><tbody>${recs.slice(0,4).map(r=>`<tr>${Object.keys(map).slice(0,5).map(k=>{ const f=S[col].fields.find(x=>x.k===k); return `<td>${esc(f.t==="num"?fm(N(r[k])):f.t==="date"?fdate(r[k]):r[k])}</td>`; }).join("")}</tr>`).join("")}</tbody></table></div>` : ""}
+      ${!missing.length && recs.length ? `<button type="button" class="btn primary" data-act="doimport">Import ${recs.length} row${recs.length>1?"s":""} into ${esc(S[col].sheet)}</button>` : ""}</div>`;
+  }catch(e){ out.innerHTML = `<p class="err">Couldn't read that file. Save it as .xlsx or .csv and try again.</p>`; }
+}
+async function doImport(){
+  if(!imp) return; const btn = document.querySelector('[data-act="doimport"]'); const out = $("#imp-out");
+  let n = 0;
+  try{
+    for(const r of imp.recs){ await writeDoc(imp.col, null, stamp(null, Object.assign({}, r, {example:false}), "imported from Excel")); n++; if(btn) btn.textContent = `Importing… ${n}/${imp.recs.length}`; }
+    out.innerHTML = `<p class="ok">Imported ${n} rows into ${esc(S[imp.col].sheet)}.</p>`; imp = null;
+  }catch(e){ out.innerHTML = `<p class="err">Stopped after ${n} rows. ${esc(writeErr(e))}</p>`; }
+}
+function sheetRows(col){
+  const fs = S[col].fields.filter(f => f.t !== "head" && f.t !== "draws");
+  const head = fs.map(f => f.l), extra = [];
+  if(col === "recv") extra.push(["Outstanding (LKR)", outR]); if(col === "pay") extra.push(["Outstanding (LKR)", outP]);
+  if(col === "units") extra.push(["Price used (LKR)", unitPrice]);
+  const rows = [head.concat(extra.map(e=>e[0]), ["Example?","Last updated"])];
+  D[col].forEach(r => rows.push(fs.map(f => f.t === "num" ? N(r[f.k]) : (r[f.k] ?? "")).concat(extra.map(e=>e[1](r)), [r.example?"Yes":"", r.updatedAt ? r.updatedAt.slice(0,10) : ""])));
+  return rows;
+}
+async function doExport(){
+  const btn = document.querySelector('[data-act="export"]'); if(btn){ btn.disabled = true; btn.textContent = "Preparing…"; }
+  try{
+    const X = await loadXLSX(); const wb = X.utils.book_new();
+    const add = (name, aoa) => { const ws = X.utils.aoa_to_sheet(aoa); ws["!cols"] = aoa[0].map(()=>({wch:18})); X.utils.book_append_sheet(wb, ws, name.slice(0,31)); };
+    add("Summary", [["Nexus Property Developers (Pvt) Ltd"],["Exported", T],[],["Cash at bank", cashAtBank()],["Receivable outstanding", sum(recvOpen(),outR)],["Payable outstanding", sum(payOpen(),outP)]]);
+    ["banks","recv","pay","cash","tax","pl","bs","projects","units","costs"].forEach(c => add(S[c].sheet, sheetRows(c)));
+    add("Loans", [["Loan","Bank","Project","Facility","Rate %","Grace months","Repay months","Status","Drawn","Outstanding today"]].concat(D.loans.map(l=>[l.name,l.bank||"",l.project||"",N(l.facility),N(l.rate),N(l.graceMonths),N(l.repayMonths),l.status||"",loanSched(l).drawn,loanOutstanding(l)])));
+    const ls_ = [["Loan","Due date","Interest","Principal","Payment","Balance after"]]; D.loans.forEach(l => loanSched(l).rows.forEach(r => ls_.push([l.name, r.date, Math.round(r.interest), Math.round(r.principal), Math.round(r.payment), Math.round(r.bal)])));
+    add("Loan schedules", ls_);
+    add("Cash forecast", [["Month","Opening","Cash in","Cash out","of which loan","Closing"]].concat(forecast().map(m=>[m.label, Math.round(m.open), Math.round(m.inn), Math.round(m.out), Math.round(m.loan), Math.round(m.close)])));
+    add("Project summary", [["Project","Status","Units","Sold","Sales value","Collected","Budget","Cost to date","Loan facility","Loan outstanding"]].concat(D.projects.map(p=>{ const s = projStats(p); return [p.name,p.status||"",s.units,s.sold,s.salesValue,s.collected,s.budget,s.cost,s.facility,s.loanOut]; })));
+    const arr = X.write(wb, {bookType:"xlsx", type:"array"});
+    await dl.save({ filename:`Nexus Finance ${T}.xlsx`, data:new Uint8Array(arr) });
+    toast("Workbook ready");
+  }catch(e){ toast(e && e.code === "declined" ? "Download cancelled" : "Couldn't prepare the workbook. Try again."); }
+  if(btn){ btn.disabled = false; btn.textContent = "Download Excel workbook"; }
+}
+async function doTemplate(){
+  try{ const X = await loadXLSX(); const col = $("#imp-col").value; const wb = X.utils.book_new();
+    const fs = S[col].fields.filter(f => f.t !== "head" && f.t !== "draws");
+    const ws = X.utils.aoa_to_sheet([fs.map(f => f.l)]); ws["!cols"] = fs.map(()=>({wch:20})); X.utils.book_append_sheet(wb, ws, S[col].sheet.slice(0,31));
+    await dl.save({ filename:`${S[col].sheet} template.xlsx`, data:new Uint8Array(X.write(wb,{bookType:"xlsx",type:"array"})) });
+  }catch(e){ if(!(e && e.code === "declined")) toast("Couldn't prepare the template."); }
+}
+
+/* ---------- events ---------- */
+document.addEventListener("click", e => {
+  if(e.target.id === "sheetbg"){ closeSheet(); return; }
+  const t = e.target.closest("button, tr[data-edit]"); if(!t) return;
+  const d = t.dataset;
+  if(d.tab){ if(d.tab === "reports" && ui.view === "reports"){ ui.proj = null; } go(d.tab); return; }
+  if(d.go){ go(d.go, d.f); return; }
+  if(d.p65s){ ui.p65 = d.p65s; render(); window.scrollTo(0,0); return; }
+  if(d.ffs){ ui.ffs = d.ffs; render(); window.scrollTo(0,0); return; }
+  if(d.fsec){ ui.fsec = d.fsec; render(); window.scrollTo(0,0); return; }
+  if(d.rf){ ui.recvF = d.rf; render(); return; }
+  if(d.rp){ ui.recvP = d.rp; render(); return; }
+  if(d.pf){ ui.payF = d.pf; render(); return; }
+  if(d.tf){ ui.taxF = d.tf; render(); return; }
+  if(d.rep){ if(sheet) closeSheet(); ui.rep = d.rep; ui.proj = null; ui.view = "reports"; render(); window.scrollTo(0,0); return; }
+  if(d.fy){ ui.fy = d.fy; render(); return; }
+  if(d.proj){ ui.proj = d.proj; render(); window.scrollTo(0,0); return; }
+  if(d.units){ ui.rep = "units"; ui.uProj = d.units; ui.proj = null; render(); window.scrollTo(0,0); return; }
+  if(d.uproj){ ui.uProj = d.uproj; render(); return; }
+  if(d.uf){ ui.uF = d.uf; render(); return; }
+  if(d.add){ if(!db){ toast("Data isn't connected in this view"); return; } openForm(d.add, null, d.preset); return; }
+  if(d.edit){ if(!db){ toast("Data isn't connected in this view"); return; } const i = d.edit.indexOf(":"); openForm(d.edit.slice(0,i), d.edit.slice(i+1)); return; }
+  switch(d.act){
+    case "close": closeSheet(); return;
+    case "projback": ui.proj = null; render(); return;
+    case "settle": { const f = $("#sheetform");
+      if(sheet.col === "recv") f.elements.received.value = f.elements.amount.value;
+      if(sheet.col === "pay") f.elements.paid.value = f.elements.amount.value;
+      if(sheet.col === "tax"){ f.elements.status.value = "Paid"; if(!f.elements.doneDate.value) f.elements.doneDate.value = T; }
+      save(); return; }
+    case "sched": schedAfter.msg = null; save(schedAfter).catch(()=>{}); return;
+    case "bsfill": bsFill(); return;
+    case "adddraw": $("#draws").insertAdjacentHTML("beforeend", drawRow(null)); return;
+    case "rmdraw": t.closest(".drow").remove(); return;
+    case "del": $("#delrow").innerHTML = `<span class="note">Delete this record for everyone?</span><button class="btn danger small" type="button" data-act="delyes">Yes, delete</button><button class="btn small" type="button" data-act="delno">Keep</button>`; return;
+    case "delyes": del(); return;
+    case "delno": $("#delrow").innerHTML = `<button class="btn danger small" type="button" data-act="del">Delete</button>`; return;
+    case "exclear": { const b = $("#exbanner"); b.innerHTML = `<div>Remove all ${examples()} example rows for everyone? Your own entries stay.</div><div class="row"><button class="btn danger small" data-act="exyes">Remove examples</button><button class="btn small" data-act="exno">Cancel</button></div>`; return; }
+    case "exyes": clearExamples(); return;
+    case "exno": render(); return;
+    case "data": openData(); return;
+    case "importnow": importNow(); return;
+    case "export": doExport(); return;
+    case "template": doTemplate(); return;
+    case "pickfile": $("#imp-file").click(); return;
+    case "doimport": doImport(); return;
+  }
+});
+document.addEventListener("change", e => {
+  if(e.target.id === "imp-file" && e.target.files[0]){ handleFile(e.target.files[0]); e.target.value = ""; }
+  if(e.target.id === "imp-col"){ imp = null; const o = $("#imp-out"); if(o) o.innerHTML = ""; }
+  if(sheet && sheet.col === "units" && e.target.closest("#sheetform")) previewSchedule();
+});
+document.addEventListener("input", e => { if(sheet && sheet.col === "units" && e.target.closest("#sheetform")){ clearTimeout(previewSchedule.t); previewSchedule.t = setTimeout(previewSchedule, 250); } });
+document.addEventListener("submit", e => { if(e.target.id === "sheetform"){ e.preventDefault(); save(); } });
+document.addEventListener("keydown", e => { if(e.key === "Escape" && sheet) closeSheet(); });
+const _schedRun = schedAfter.run;
+schedAfter.run = async function(u, id){ try{ await _schedRun(u, id); } catch(e){ if(e && e.code === "has_receipts"){ schedAfter.msg = "Unit saved. Schedule not replaced because receipts are recorded."; return; } throw e; } };
+
+/* ---------- data connection ---------- */
+/* ---------- directors' summary: one small record (sync/directors) read by the daily job that refreshes the password-protected directors' page ---------- */
+let dirTimer = null, dirLast = "";
+function directorsSummary(){
+  const real = c => D[c].filter(x => !x.example);
+  const rv = real("recv").filter(r => outR(r) > 0.5), pv = real("pay").filter(p => outP(p) > 0.5);
+  const od = r => r.dueDate && days(r.dueDate, T) > 0;
+  const soon = (r, n) => r.dueDate && days(T, r.dueDate) >= 0 && days(T, r.dueDate) <= n;
+  const projs = [...new Set(rv.map(r => r.project).concat(real("projects").map(p => p.name)).filter(Boolean))].sort();
+  const pr = real("projects");
+  return {
+    today: T,
+    banks: real("banks").map(b => ({ name:b.name||"", bank:b.bank||"", type:b.type||"", balance:N(b.balance), asOf:b.asOf||"" })).sort((a,b)=>b.balance-a.balance),
+    recv: {
+      open: sum(rv, outR), overdue: sum(rv.filter(od), outR), overdueCount: rv.filter(od).length,
+      due30: sum(rv.filter(r => soon(r,30)), outR), tbc: sum(rv.filter(r => !r.dueDate), outR),
+      byProject: projs.map(p => { const x = rv.filter(r => r.project === p); return { project:p, open:sum(x,outR), overdue:sum(x.filter(od),outR) }; }).filter(x => x.open > 0),
+      topOverdue: rv.filter(od).sort((a,b)=>outR(b)-outR(a)).slice(0,10).map(r => ({ customer:r.customer||"", project:r.project||"", unit:r.unit||"", ref:r.ref||"", dueDate:r.dueDate, out:outR(r) })),
+      next30: rv.filter(r => soon(r,30)).sort((a,b)=>a.dueDate.localeCompare(b.dueDate)).slice(0,15).map(r => ({ customer:r.customer||"", project:r.project||"", unit:r.unit||"", dueDate:r.dueDate, out:outR(r) }))
+    },
+    pay: {
+      open: sum(pv, outP), overdue: sum(pv.filter(od), outP), due14: sum(pv.filter(p => soon(p,14)), outP),
+      list: pv.filter(p => od(p) || soon(p,30)).sort((a,b)=>(a.dueDate||"").localeCompare(b.dueDate||"")).slice(0,12).map(p => ({ supplier:p.supplier||"", project:p.project||"", ref:p.ref||"", dueDate:p.dueDate||"", out:outP(p) }))
+    },
+    tax: real("tax").filter(t => t.status !== "Paid" && !(t.status === "Filed" && !N(t.amount)) && t.dueDate && days(T, t.dueDate) <= 45)
+      .sort((a,b)=>a.dueDate.localeCompare(b.dueDate)).slice(0,12).map(t => ({ item:t.item||t.taxType||"", dueDate:t.dueDate, status:t.status||"", amount:N(t.amount) })),
+    projects: pr.map(p => { const s = projStats(p); return { name:p.name||"", status:p.status||"", units:s.units||0, sold:s.sold||0, salesValue:s.salesValue||0, collected:s.collected||0, budget:s.budget||0, cost:s.cost||0, loanOut:s.loanOut||0 }; }),
+    loans: real("loans").map(l => ({ name:l.name||"", project:l.project||"", facility:N(l.facility), rate:N(l.rate), status:l.status||"", out:loanOutstanding(l) }))
+  };
+}
+function queueDirectors(){
+  if(!db || !canWrite || !COLS.every(c => loaded[c])) return;
+  clearTimeout(dirTimer);
+  dirTimer = setTimeout(async () => {
+    try{
+      const s = directorsSummary(), key = JSON.stringify(s);
+      if(key === dirLast) return;
+      dirLast = key;
+      await db.doc("sync/directors").set(Object.assign({ updatedAt: new Date().toISOString() }, s));
+    }catch(e){ dirLast = ""; }
+  }, 4000);
+}
+/* ---------- full snapshot for the directors' page: an editor's view uploads the whole data set as one JSON asset (sync/snapshot points at it); the daily job encrypts it for the password-protected copy of this app ---------- */
+let assetsNS = null, snapTimer = null, snapLastKey = "", snapLastAt = 0, SNAPPTR = null;
+function queueSnapshot(){
+  if(!assetsNS || !db || !canWrite || !COLS.every(c => loaded[c])) return;
+  clearTimeout(snapTimer);
+  const wait = Math.max(20000, snapLastAt + 15*60000 - Date.now());
+  snapTimer = setTimeout(async () => {
+    try{
+      const docs = { "sync/latest": SYNC, "feasibility/p65": FEAS, "feasibility/ffs2627": FFS };
+      const cols = {}; COLS.forEach(c => cols[c] = D[c]);
+      const key = JSON.stringify({ cols, docs });
+      if(key === snapLastKey) return;
+      const at = new Date().toISOString();
+      const res = await assetsNS.upload(new Blob([JSON.stringify({ v:1, at, cols, docs })], { type:"application/json" }), { type:"application/json" });
+      const prev = SNAPPTR && SNAPPTR.id;
+      await db.doc("sync/snapshot").set({ id: res.id, at, sizeBytes: res.sizeBytes });
+      snapLastKey = key; snapLastAt = Date.now();
+      if(prev && prev !== res.id){ try{ await assetsNS.delete(prev); }catch(e){} }
+    }catch(e){ snapLastAt = Date.now(); }
+  }, wait);
+}
+function setSync(state, txt){ connState = state; $("#syncdot").className = "dot " + (state==="on"?"on":state==="error"||state==="offline"?"err":""); $("#synctxt").textContent = txt; }
+render();
+(async () => {
+  if(!window.claude || typeof window.claude.use !== "function"){ setSync("offline","Offline"); render(); return; }
+  try{ db = await window.claude.use("db"); }catch(e){ db = null; }
+  if(!db){ setSync("offline","Sign in to load data"); render(); return; }
+  try{ userNS = await window.claude.use("user"); if(userNS){ uid = await userNS.id(); const c = await userNS.can("data.write"); if(c === false) canWrite = false; } }catch(e){}
+  try{ dl = await window.claude.use("downloads"); }catch(e){ dl = null; }
+  try{ isOwnerView = userNS ? await userNS.isOwner() : false; if(isOwnerView) mcpNS = await window.claude.use("mcp"); }catch(e){ mcpNS = null; }
+  if(canWrite){ try{ assetsNS = await window.claude.use("assets"); }catch(e){ assetsNS = null; } }
+  if(assetsNS) db.doc("sync/snapshot").onSnapshot(snap => { SNAPPTR = snap.exists ? snap.data() : null; }, () => {});
+  setSync("on", canWrite ? "Live" : "Live · view only");
+  db.doc("sync/latest").onSnapshot(snap => { SYNC = snap.exists ? snap.data() : null; if(!sheet && ui.view === "home") render(); }, () => {});
+  db.doc("feasibility/p65").onSnapshot(snap => { FEAS = snap.exists ? snap.data() : null; FEAS_READY = true; if(!sheet && (ui.view === "p65" || ui.view === "home")) render(); }, () => { FEAS_READY = true; });
+  db.doc("feasibility/ffs2627").onSnapshot(snap => { FFS = snap.exists ? snap.data() : null; if(!sheet && (ui.view === "p65" || ui.view === "home")) render(); }, () => {});
+  COLS.forEach(c => {
+    db.collection(c).onSnapshot(snap => {
+      D[c] = snap.docs.map(d => Object.assign({id:d.id}, d.data())); loaded[c] = true;
+      if(!sheet) render();
+      queueDirectors();
+      queueSnapshot();
+    }, err => { loaded[c] = true; setSync("error","Connection lost"); if(!sheet) render(); });
+  });
+})();
+})();
+</script>
+
+
+
 </body>
 </html>

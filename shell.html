@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#1f242b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Nexus">
+<title>Nexus Finance Desk</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%233fb950'/%3E%3Ctext x='32' y='44' font-family='Arial' font-weight='700' font-size='34' text-anchor='middle' fill='%230d1a10'%3EN%3C/text%3E%3C/svg%3E">
+<style>
+html,body{margin:0;background:#1f242b;color:#f4f6f8}
+#nxlock{position:fixed;inset:0;z-index:100;background:#1f242b;display:grid;place-items:center;padding:24px 16px;font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif}
+#nxlock form{width:100%;max-width:380px;background:#252b33;border-radius:14px;padding:18px;display:grid;gap:14px;box-sizing:border-box}
+#nxlock .hd{display:flex;gap:12px;align-items:center}
+#nxlock .mk{width:34px;height:34px;border-radius:9px;background:#3fb950;color:#0d1a10;display:grid;place-items:center;font-weight:700}
+#nxlock b{font-size:17px}#nxlock .sub{font-size:13px;color:#9aa3ad}
+#nxlock input[type=password]{width:100%;box-sizing:border-box;background:#1f242b;color:#f4f6f8;border:1px solid #2b323b;border-radius:10px;padding:12px;font-size:16px}
+#nxlock label{display:flex;gap:8px;align-items:center;font-size:14px;color:#9aa3ad}
+#nxlock button{background:#3fb950;color:#0d1a10;border:0;border-radius:10px;padding:12px;font-size:15px;font-weight:700;cursor:pointer}
+#nxlock .err{color:#ef5f56;font-size:14px;min-height:1.2em}
+[hidden]{display:none!important}
+#nxbar{position:fixed;left:0;right:0;bottom:calc(58px + env(safe-area-inset-bottom,0px));z-index:8;display:flex;justify-content:center;pointer-events:none}
+#nxbar div{pointer-events:auto;background:#2b323b;color:#9aa3ad;font:12.5px "Segoe UI",system-ui,sans-serif;border-radius:999px;padding:5px 12px;margin-bottom:8px;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+#nxbar button{background:none;border:0;color:#3fb950;font:inherit;font-weight:600;cursor:pointer;padding:0 0 0 8px}
+</style>
+<script>
+/* Directors' view: stands in for the Claude data connection with a password-locked, read-only copy of the data. */
+(function(){
+  const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  const store = { get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }, set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }, del(k){ try{ localStorage.removeItem(k); }catch(e){} } };
+  let ready; const dataP = new Promise(r => ready = r);
+  async function decrypt(pw){
+    const r = await fetch("data.enc.json?t=" + Date.now(), {cache:"no-store"});
+    if(!r.ok) throw new Error("load");
+    const e = await r.json();
+    const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveKey"]);
+    const key = await crypto.subtle.deriveKey({name:"PBKDF2", salt:b64(e.salt), iterations:e.iter, hash:"SHA-256"}, base, {name:"AES-GCM", length:256}, false, ["decrypt"]);
+    let plain; try{ plain = await crypto.subtle.decrypt({name:"AES-GCM", iv:b64(e.iv)}, key, b64(e.ct)); }catch(x){ throw new Error("pw"); }
+    return JSON.parse(new TextDecoder().decode(plain));
+  }
+  const deny = () => Promise.reject({ code:"not_granted", message:"Read-only directors' view" });
+  function snap(list){ list = list || []; return { size:list.length, empty:!list.length, docs:list.map(d => ({ id:d.id, exists:true, data:() => { const o = Object.assign({}, d); delete o.id; return o; } })) }; }
+  function makeDb(DATA){
+    const cols = DATA.cols || {}, docs = DATA.docs || {};
+    const find = path => { if(Object.prototype.hasOwnProperty.call(docs, path)) return docs[path]; const i = path.lastIndexOf("/"); const c = path.slice(0,i), id = path.slice(i+1); const d = (cols[c]||[]).find(x => x.id === id); if(!d) return null; const o = Object.assign({}, d); delete o.id; return o; };
+    const docRef = path => ({ id:path.split("/").pop(), path,
+      onSnapshot(cb){ const v = find(path); setTimeout(() => cb({ id:path.split("/").pop(), exists:v != null, data:() => v }), 0); return () => {}; },
+      get: async () => { const v = find(path); return { id:path.split("/").pop(), exists:v != null, data:() => v }; },
+      set:deny, update:deny, delete:deny });
+    const colRef = c => { const q = { onSnapshot(cb){ setTimeout(() => cb(snap(cols[c])), 0); return () => {}; }, get: async () => snap(cols[c]),
+      where(){ return q; }, orderBy(){ return q; }, limit(){ return q; }, doc(id){ return docRef(c + "/" + (id || "x")); }, add:deny }; return q; };
+    return { collection: colRef, doc: docRef };
+  }
+  const user = { id: async () => null, me: async () => ({}), can: async () => false, canEdit: async () => false, isOwner: async () => false, profiles: async () => ({}), search: async () => [] };
+  window.claude = { use: async name => { const D = await dataP; if(name === "db") return makeDb(D); if(name === "user") return user; return null; } };
+
+  function asAt(D){ const s = (D.at || "").slice(0,10); if(!s) return ""; const [y,m,d] = s.split("-").map(Number); return `${d} ${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][m-1]} ${y}`; }
+  function lock(){ store.del("nx-dir-pw"); location.reload(); }
+  async function open(pw, remember){
+    const err = document.getElementById("nxerr"), btn = document.getElementById("nxgo");
+    err.textContent = ""; btn.disabled = true; btn.textContent = "Opening…";
+    try{
+      const D = await decrypt(pw);
+      if(remember) store.set("nx-dir-pw", pw);
+      document.getElementById("nxlock").remove();
+      const bar = document.getElementById("nxbar");
+      bar.innerHTML = `<div>Directors' view · figures as at ${asAt(D)}<button type="button" id="nxout">Lock</button></div>`; bar.hidden = false;
+      document.getElementById("nxout").onclick = lock;
+      ready(D);
+      setTimeout(() => { const t = document.getElementById("synctxt"); if(t) t.textContent = "View only"; }, 800);
+    }catch(e){
+      store.del("nx-dir-pw");
+      err.textContent = e.message === "pw" ? "That password isn't right." : "Couldn't load the figures. Check your connection and try again.";
+      btn.disabled = false; btn.textContent = "Open";
+    }
+  }
+  document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("nxf").addEventListener("submit", ev => { ev.preventDefault(); open(document.getElementById("nxpw").value, document.getElementById("nxrem").checked); });
+    const saved = store.get("nx-dir-pw"); if(saved){ document.getElementById("nxrem").checked = true; open(saved, true); }
+  });
+})();
+</script>
+</head>
+<body>
+<div id="nxlock">
+  <form id="nxf">
+    <div class="hd"><div class="mk">N</div><div><b>Nexus Property Developers</b><div class="sub">Directors' view of the Finance Desk</div></div></div>
+    <input type="password" id="nxpw" placeholder="Password" autocomplete="current-password" aria-label="Password" required>
+    <label><input type="checkbox" id="nxrem"> Remember on this phone</label>
+    <button id="nxgo" type="submit">Open</button>
+    <div class="err" id="nxerr" role="alert"></div>
+  </form>
+</div>
+<div id="nxbar" hidden></div>
+<!--NEXUS-APP-->
+</body>
+</html>
