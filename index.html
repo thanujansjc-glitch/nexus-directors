@@ -231,7 +231,7 @@ td.neg,.neg{color:var(--bad)}
 .fab{position:fixed;right:max(16px,calc(50% - 364px));bottom:calc(78px + env(safe-area-inset-bottom,0px));z-index:6;border:0;background:var(--accent);color:var(--accent-ink);border-radius:16px;height:52px;padding:0 18px;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,.18);display:flex;align-items:center;gap:8px;font-size:15px}
 .fab svg{width:20px;height:20px}
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:7;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
-nav.tabs .in{max-width:760px;margin:0 auto;display:grid;grid-template-columns:repeat(7,1fr)}
+nav.tabs .in{max-width:760px;margin:0 auto;display:grid;grid-template-columns:repeat(6,1fr)}
 nav.tabs button{border:0;background:none;padding:8px 2px 9px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;line-height:1.15;text-align:center;font-weight:600;color:var(--muted);min-height:58px}
 nav.tabs svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 nav.tabs button[aria-current="page"]{color:var(--accent)}
@@ -577,17 +577,16 @@ async function resolveNames(){
 /* ---------- views ---------- */
 const TABS = [
   {id:"home",l:"Home",i:'<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>'},
-  {id:"cash",l:"Cash",i:'<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><path d="M16 15h2"/>'},
-  {id:"recv",l:"Customers",i:'<path d="M12 19V5"/><path d="M6 11l6-6 6 6"/>'},
-  {id:"pay",l:"Suppliers",i:'<path d="M12 5v14"/><path d="M18 13l-6 6-6-6"/>'},
+  {id:"cash",l:"Cash & banks",i:'<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><path d="M16 15h2"/>'},
+  {id:"recv",l:"Sales",i:'<path d="M12 19V5"/><path d="M6 11l6-6 6 6"/>'},
+  {id:"pay",l:"Costs",i:'<path d="M12 5v14"/><path d="M18 13l-6 6-6-6"/>'},
   {id:"tax",l:"Tax",i:'<rect x="4" y="4" width="16" height="17" rx="2"/><path d="M8 2v4M16 2v4M4 10h16"/><path d="M9 15l2 2 4-4"/>'},
-  {id:"reports",l:"Reports",i:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>'},
-  {id:"p65",l:"Forecasts",i:'<rect x="6" y="3" width="12" height="18" rx="1"/><path d="M10 7h1M13 7h1M10 11h1M13 11h1M10 15h1M13 15h1M3 21h18"/>'}
+  {id:"reports",l:"Reports",i:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>'}
 ];
 function fabFor(){
   if(ui.view === "cash") return ["banks","Bank balance"];
-  if(ui.view === "recv") return ["recv","Instalment"];
-  if(ui.view === "pay") return ["pay","Supplier bill"];
+  if(ui.view === "recv") return ui.sSub === "units" ? ["units","Unit"] : ["recv","Instalment"];
+  if(ui.view === "pay") return ui.cSub === "budget" ? (ui.proj ? ["costs","Cost line"] : ["projects","Project"]) : ["pay","Supplier bill"];
   if(ui.view === "tax") return ["tax","Deadline"];
   if(ui.view === "reports"){
     if(ui.rep === "proj") return ui.proj ? ["costs","Cost line"] : ["projects","Project"];
@@ -626,6 +625,7 @@ function viewHome(){
   const tNext = t30.filter(t => !(t.dueDate < T));
   if(tNext.length) A.push(["warn", `Next tax deadline: ${tNext[0].item}`, `${fdate(tNext[0].dueDate)}${tNext.length>1?` · ${tNext.length-1} more in the next 30 days`:""}`, "tax","upcoming"]);
   if(stale.length) A.push(["warn", `${stale.length} bank balance${stale.length>1?"s":""} not updated in over a week`, stale.slice(0,3).map(b=>b.name).join(" · "), "cash"]);
+  { const pm = mPrev(T.slice(0,7)); if(Number(T.slice(8,10)) >= 10 && D.periods && loadedPeriods && !isClosed(pm) && D.banks.length) A.push(["warn", `${mName(pm)} not closed yet`, "Work through the month-end checklist and close the month", "reports","close"]); }
   if(!A.length && D.banks.length) A.push(["good","Nothing needs attention","No overdue items and no deadlines in the next two weeks","home"]);
 
   const act = []; COLS.forEach(c => D[c].forEach(r => { if(r.updatedBy && r.updatedAt) act.push([c,r]); }));
@@ -730,14 +730,14 @@ function viewRecv(){
   <h2>Customer receivables</h2>
   ${agingCard(D.recv, outR, "Outstanding from buyers")}
   ${projs.length > 1 ? `<section class="card"><h3>By project</h3><div class="stmt one" style="margin-top:6px">${projs.map(p=>`<div><span>${esc(p)}</span><b>${fm(sum(open.filter(r=>r.project===p),outR))}</b></div>`).join("")}</div></section>` : ""}
-  <p class="note" style="margin:0">Booking a unit under Reports → Units creates its instalments here automatically.</p>
+  <p class="note" style="margin:0">Booking a unit under Sales → Units creates its instalments here automatically.</p>
   ${allProjs.length > 1 ? `<div class="seg" role="group" aria-label="Project">${[["all","All projects"]].concat(allProjs.map(p=>[p,p])).map(([k,l])=>`<button data-rp="${esc(k)}" aria-pressed="${(ui.recvP||"all")===k}">${esc(l)}</button>`).join("")}</div>` : ""}
   <div class="seg" role="group" aria-label="Filter">${[["open","Open"],["overdue","Overdue"],["soon","Due ≤30 days"],["tbc","Date TBC"],["paid","Received"],["all","All"]].map(([k,l])=>`<button data-rf="${k}" aria-pressed="${f===k}">${l}</button>`).join("")}</div>
   <p class="note" style="margin:0">${rows.length} instalment${rows.length!==1?"s":""} · LKR ${fm(sum(rows, r => outR(r) > 0.5 ? outR(r) : 0))} outstanding in this view</p>
   ${notReady("recv") ? loadingList() : rows.length ? `<div class="list">${rows.map(r => `
     <button class="item" data-edit="recv:${esc(r.id)}"><div><div class="t">${esc(r.customer)}${exChip(r)}</div><div class="d">${esc([r.project, r.unit && "Unit "+r.unit, r.ref].filter(Boolean).join(" · "))}</div><div style="margin-top:4px">${dueChip(r.dueDate, outR(r)<=0.5)}</div></div>
     <div class="amt">${fm(outR(r) > 0.5 ? outR(r) : N(r.amount))}<small>${outR(r) > 0.5 ? (N(r.received) ? "of "+fm(N(r.amount)) : "due "+fdate(r.dueDate)) : "received"}</small></div></button>`).join("")}</div>`
-    : emptyState(D.recv.length ? "Nothing in this filter." : "No customer instalments yet. Book units under Reports → Units, or add instalments here.", D.recv.length ? null : "recv")}`;
+    : emptyState(D.recv.length ? "Nothing in this filter." : "No customer instalments yet. Book units under Sales → Units, or add instalments here.", D.recv.length ? null : "recv")}`;
 }
 
 function viewPay(){
@@ -791,12 +791,12 @@ function plSum(rows){
   const s = {revenue:0,cos:0,admin:0,selling:0,finance:0,other:0,tax:0}; rows.forEach(r => Object.keys(s).forEach(k => s[k] += N(r[k])));
   s.gp = s.revenue - s.cos; s.op = s.gp - s.admin - s.selling; s.pbt = s.op - s.finance + s.other; s.pat = s.pbt - s.tax; return s;
 }
-const REPS = [["pl","Income statement"],["bs","Balance sheet"],["proj","Projects"],["units","Units"],["loans","Loans"]];
+const REPS = [["pl","Income statement"],["bs","Balance sheet"],["proj","Projects"],["loans","Loans"],["fc","Forecasts"],["close","Month-end"]];
 function repHead(){
   return `${exampleBanner()}<h2>Reports</h2><div class="seg" role="group" aria-label="Report">${REPS.map(([k,l])=>`<button data-rep="${k}" aria-pressed="${ui.rep===k}">${l}</button>`).join("")}</div>`;
 }
 function viewReports(){
-  return repHead() + ({pl:repPL, bs:repBS, proj:repProj, units:repUnits, loans:repLoans}[ui.rep] || repPL)();
+  return repHead() + ({pl:repPL, bs:repBS, proj:repProj, loans:repLoans, fc:() => viewForecasts().replace("<h2>Forecasts</h2>",""), close:repClose}[ui.rep] || repPL)();
 }
 function repPL(){
   const rows = D.pl.filter(r => r.month).slice().sort((a,b)=>a.month.localeCompare(b.month));
@@ -1098,17 +1098,158 @@ function viewForecasts(){
   return `<h2>Forecasts</h2><div class="seg" role="group" aria-label="Forecast type">${[["p65","New project: 65 St Lawrence"],["ffs","Forecast FS 2026/27"]].map(([k,l])=>`<button data-fsec="${k}" aria-pressed="${k===sec}">${l}</button>`).join("")}</div>${sec==="ffs"?viewFFS():viewP65()}`;
 }
 
+
+/* ---------- Sales and Costs (grouped tabs) ---------- */
+function subSeg(attr, cur, opts){ return `<div class="seg" role="group" aria-label="Section">${opts.map(([k,l])=>`<button data-${attr}="${k}" aria-pressed="${k===cur}">${l}</button>`).join("")}</div>`; }
+function viewSales(){
+  const sub = ui.sSub === "units" ? "units" : "recv";
+  const seg = subSeg("ssub", sub, [["recv","Customer instalments"],["units","Units"]]);
+  return sub === "units" ? `${exampleBanner()}<h2>Units</h2>${seg}${repUnits()}` : seg + viewRecv();
+}
+function viewCosts(){
+  const sub = ui.cSub === "budget" ? "budget" : "pay";
+  const seg = subSeg("csub", sub, [["pay","Supplier bills"],["budget","Cost budgets"]]);
+  return sub === "budget" ? `${exampleBanner()}<h2>Cost budgets</h2>${seg}${repProj()}` : seg + viewPay();
+}
+
+/* ---------- month-end close and lock ---------- */
+const MONL = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const mName = m => { const [y,mo] = m.split("-").map(Number); return `${MONL[mo-1]} ${y}`; };
+const mEnd = m => { const [y,mo] = m.split("-").map(Number); const d = new Date(Date.UTC(y, mo, 0)); return d.toISOString().slice(0,10); };
+const mPrev = m => { const [y,mo] = m.split("-").map(Number); return mo === 1 ? `${y-1}-12` : `${y}-${String(mo-1).padStart(2,"0")}`; };
+let canAdmin = false;
+const canClose = () => canWrite && !!db && (isOwnerView || canAdmin);
+const periodOf = m => (D.periods || []).find(p => p.id === m) || null;
+const isClosed = m => !!m && (periodOf(m) || {}).status === "Closed";
+const closedDate = d => !!d && typeof d === "string" && d.length >= 7 && isClosed(d.slice(0,7));
+function lockMsg(d){ return `${mName(d.slice(0,7))} is closed, so this can't be changed. Reopen the month under Reports → Month-end first.`; }
+/* Returns a message when saving (next) or deleting (next = null) would change figures in a closed month. */
+function checkLock(col, prev, next){
+  const p = prev || {}, n = next || {}, gone = !next;
+  const hit = (...ds) => ds.find(closedDate);
+  const recDates = r => (Array.isArray(r && r.receipts) ? r.receipts : []).map(x => x && x.date).concat((Array.isArray(r && r.payments) ? r.payments : []).map(x => x && x.date));
+  let d = null;
+  if(col === "pl") d = [p.month, n.month].map(m => m && m + "-01").find(closedDate);
+  else if(col === "bs") d = hit(p.date, n.date);
+  else if(col === "cash") d = hit(p.date, n.date);
+  else if(col === "banks"){
+    if(gone) d = hit(p.asOf);
+    else if(!prev || N(p.balance) !== N(n.balance) || p.asOf !== n.asOf) d = hit(n.asOf);
+  }
+  else if(col === "tax"){
+    const changed = gone || !prev || p.status !== n.status || N(p.amount) !== N(n.amount) || (p.doneDate||"") !== (n.doneDate||"");
+    if(changed) d = hit(p.doneDate, n.doneDate);
+  }
+  else if(col === "recv" || col === "pay"){
+    const got = col === "recv" ? "received" : "paid";
+    if(gone) d = hit(p.dueDate, ...recDates(p));
+    else {
+      if(!prev || N(p.amount) !== N(n.amount) || (p.dueDate||"") !== (n.dueDate||"")) d = hit(p.dueDate, n.dueDate);
+      if(!d && prev && N(n[got]) < N(p[got])) d = hit(p.dueDate, ...recDates(p));
+    }
+  }
+  return d ? lockMsg(d) : null;
+}
+function monthChecks(m){
+  const me = mEnd(m), name = mName(m), real = c => (D[c] || []).filter(x => !x.example);
+  const banks = real("banks"), bOk = banks.filter(b => (b.asOf||"") >= me).length;
+  let rc = 0, rt = 0; real("recv").forEach(r => (r.receipts||[]).forEach(x => { if(x && x.date && x.date.slice(0,7) === m){ rc++; rt += N(x.amount); } }));
+  const billsM = real("pay").filter(x => (x.dueDate||"").slice(0,7) === m).length;
+  const taxM = real("tax").filter(t => String(t.item||"").includes(name) || String(t.period||"").includes(name) || (t.period||"") === m);
+  const taxOpen = taxM.filter(t => t.status !== "Paid" && t.status !== "Filed");
+  const plOk = real("pl").some(r => r.month === m), bsOk = real("bs").some(r => (r.date||"").slice(0,7) === m);
+  const over = real("recv").filter(r => outR(r) > 0.5 && r.dueDate && r.dueDate <= me).length;
+  return [
+    {k:"banks", l:"Bank balances updated to month end", auto: banks.length > 0 && bOk === banks.length, d:`${bOk} of ${banks.length} accounts have a balance at or after ${fdate(me)}`},
+    {k:"rec", l:"Bank accounts reconciled to the bank books", d:"Tick when HNB and Peoples current accounts agree to the bank books"},
+    {k:"recv", l:"Customer receipts for the month entered", d:`${rc} receipt${rc!==1?"s":""} dated in ${name} · LKR ${fm(rt)}`},
+    {k:"pay", l:"Supplier bills and payments entered", d:`${billsM} bill${billsM!==1?"s":""} due in ${name} in the app`},
+    {k:"tax", l:`Tax for ${name} filed or paid`, auto: taxM.length > 0 && !taxOpen.length, d: taxM.length ? (taxOpen.length ? `${taxOpen.length} of ${taxM.length} still open: ${taxOpen.slice(0,2).map(t=>t.item).join(" · ")}` : `All ${taxM.length} items filed or paid`) : "No tax items named for this month"},
+    {k:"pl", l:"Income statement for the month entered", auto: plOk, d: plOk ? "Entered under Reports → Income statement" : "Not entered yet"},
+    {k:"bs", l:"Balance sheet at month end entered", auto: bsOk, d: bsOk ? "Entered under Reports → Balance sheet" : "Not entered yet"},
+    {k:"review", l:"Overdue customers and supplier payments reviewed", d:`${over} customer instalment${over!==1?"s":""} unpaid at ${fdate(me)}`}
+  ];
+}
+function checkState(m){
+  const per = periodOf(m) || {}, ticks = per.checks || {};
+  const items = monthChecks(m).map(c => Object.assign(c, { ticked: !!(ticks[c.k] && ticks[c.k].done), done: !!c.auto || !!(ticks[c.k] && ticks[c.k].done) }));
+  return { per, items, done: items.filter(i => i.done).length };
+}
+function monthFigures(m){
+  const me = mEnd(m), real = c => (D[c] || []).filter(x => !x.example);
+  const pl = real("pl").find(r => r.month === m), ps = pl ? plSum([pl]) : null;
+  return { cash: sum(real("banks"), b => N(b.balance)), recvOpen: sum(real("recv").filter(r => outR(r) > 0.5), outR), recvOverdue: sum(real("recv").filter(r => outR(r) > 0.5 && r.dueDate && r.dueDate <= me), outR), payOpen: sum(real("pay").filter(p => outP(p) > 0.5), outP), revenue: ps ? ps.revenue : null, pat: ps ? ps.pat : null };
+}
+function closeMonths(){
+  const cur = T.slice(0,7), out = []; let m = cur;
+  const first = ["2026-04"].concat((D.periods||[]).map(p => p.id), (D.pl||[]).map(r => r.month).filter(Boolean)).sort()[0];
+  for(let i = 0; i < 36 && m >= first; i++){ out.push(m); m = mPrev(m); }
+  return out;
+}
+function repClose(){
+  if(ui.cm) return closeDetail(ui.cm);
+  const ms = closeMonths();
+  return `<p class="note" style="margin:0">Work through the checklist for each month, then close it. A closed month is locked: its income statement, balance sheet, bank balances, tax filings and the instalments and bills due in it can't be changed until someone reopens it.</p>
+  <div class="list">${ms.map(m => { const st = checkState(m), cl = st.per.status === "Closed";
+    return `<button class="item" data-cm="${m}"><div><div class="t">${mName(m)}</div><div class="d">${cl ? `Closed ${st.per.closedAt ? fdate(st.per.closedAt.slice(0,10)) : ""}` : `${st.done} of ${st.items.length} checks done`}</div></div><div class="amt">${cl ? chip("Closed","good") : m === T.slice(0,7) ? chip("Current") : chip("Open","warn")}</div></button>`; }).join("")}</div>`;
+}
+function closeDetail(m){
+  const st = checkState(m), cl = st.per.status === "Closed", all = st.done === st.items.length, f = st.per.figures;
+  const log = (st.per.log || []).slice().reverse();
+  return `<div class="row"><button class="btn small" data-cm="-">← All months</button></div>
+  <section class="card ${cl?"":"hero"}" style="${cl?"border-left:4px solid var(--good)":""}"><div class="eyebrow">Month-end</div><div class="big" style="font-size:26px">${mName(m)}</div>
+    <div class="meta">${cl ? `Closed on ${fdate((st.per.closedAt||"").slice(0,10))} by ${who(st.per.closedBy)}. Figures dated in this month are locked.` : `${st.done} of ${st.items.length} checks done${m >= T.slice(0,7) ? " · the month hasn't ended yet" : ""}`}</div></section>
+  <div class="list">${st.items.map(i => `<div class="item" style="cursor:default"><div><div class="t">${i.done ? "✓ " : ""}${esc(i.l)}</div><div class="d">${esc(i.d)}${i.auto ? " · checked automatically" : ""}</div></div>
+    <div class="amt">${i.auto ? chip("Done","good") : (!cl && canWrite && db) ? `<button class="btn small ${i.ticked?"primary":""}" data-ck="${m}:${i.k}">${i.ticked ? "Done" : "Tick"}</button>` : i.ticked ? chip("Done","good") : chip("Open","warn")}</div></div>`).join("")}</div>
+  ${cl && f ? `<section class="card"><h3>Figures when closed</h3><div class="stmt one" style="margin-top:6px"><div><span>Cash at bank</span><b>${fm(f.cash)}</b></div><div><span>Owed by customers</span><b>${fm(f.recvOpen)}</b></div><div><span>of which due by month end</span><b>${fm(f.recvOverdue)}</b></div><div><span>Owed to suppliers</span><b>${fm(f.payOpen)}</b></div>${f.revenue!=null?`<div><span>Revenue for the month</span><b>${fm(f.revenue)}</b></div><div><span>Profit after tax for the month</span><b>${fm(f.pat)}</b></div>`:""}</div></section>` : ""}
+  ${canClose() ? (cl
+      ? `<section class="card stack"><h3>Reopen ${mName(m)}</h3><label class="note" for="reopenwhy">Reason (kept in the history)</label><input id="reopenwhy" class="in" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);color:var(--fg)" placeholder="e.g. late supplier invoice"><button class="btn" data-act="reopen" data-m="${m}">Reopen month</button></section>`
+      : `<section class="card stack"><button class="btn primary" data-act="closemonth" data-m="${m}" ${all ? "" : "disabled"}>Close ${mName(m)}</button><p class="note" style="margin:0">${all ? "Closing locks the month's figures for everyone." : "Finish every check first. Automatic checks tick themselves when the data is in the app."}</p></section>`)
+    : `<p class="note" style="margin:0">Only the app's owner or an editor can close or reopen a month.</p>`}
+  ${log.length ? `<section class="card"><h3>History</h3><div class="hist" style="margin-top:6px">${log.map(l => `<div><span>${esc(l.what)}</span><span class="w">${who(l.by)} · ${fdate((l.at||"").slice(0,10))}</span></div>`).join("")}</div></section>` : ""}`;
+}
+async function savePeriod(m, patch, what){
+  const cur = periodOf(m) || {};
+  const data = Object.assign({}, cur, patch, { month: m });
+  delete data.id;
+  data.log = (Array.isArray(cur.log) ? cur.log : []).concat([{ by: uid || null, at: new Date().toISOString(), what }]).slice(-30);
+  data.updatedAt = new Date().toISOString(); data.updatedBy = uid || null;
+  await db.collection("periods").doc(m).set(data);
+}
+async function toggleCheck(arg){
+  const [m, k] = arg.split(":"); if(isClosed(m) || !canWrite || !db) return;
+  const cur = (periodOf(m) || {}).checks || {}, now = !(cur[k] && cur[k].done);
+  const item = monthChecks(m).find(c => c.k === k) || {l:k};
+  try{ await savePeriod(m, { checks: Object.assign({}, cur, { [k]: { done: now, by: uid || null, at: new Date().toISOString() } }), status: (periodOf(m)||{}).status || "Open" }, `${now ? "Ticked" : "Unticked"}: ${item.l}`); }
+  catch(e){ toast("Couldn't save. Try again."); }
+}
+async function closeMonth(m){
+  const st = checkState(m); if(st.done !== st.items.length || !canClose()) return;
+  try{ await savePeriod(m, { status: "Closed", closedAt: new Date().toISOString(), closedBy: uid || null, figures: monthFigures(m) }, `Closed ${mName(m)}`); toast(`${mName(m)} closed`); }
+  catch(e){ toast("Couldn't close the month. Try again."); }
+}
+async function reopenMonth(m){
+  const why = ($("#reopenwhy") && $("#reopenwhy").value.trim()) || "";
+  if(!why){ toast("Enter a reason first"); return; }
+  try{ await savePeriod(m, { status: "Open", reopenedAt: new Date().toISOString(), reopenedBy: uid || null }, `Reopened ${mName(m)}: ${why}`); toast(`${mName(m)} reopened`); }
+  catch(e){ toast("Couldn't reopen the month. Try again."); }
+}
+
 /* ---------- render ---------- */
 function render(){
   renderTabs();
-  const V = {home:viewHome, cash:viewCash, recv:viewRecv, pay:viewPay, tax:viewTax, reports:viewReports, p65:viewForecasts}[ui.view] || viewHome;
+  if(ui.view === "p65"){ ui.view = "reports"; ui.rep = "fc"; }
+  if(ui.view === "reports" && ui.rep === "units"){ ui.view = "recv"; ui.sSub = "units"; ui.rep = "pl"; }
+  const V = {home:viewHome, cash:viewCash, recv:viewSales, pay:viewCosts, tax:viewTax, reports:viewReports}[ui.view] || viewHome;
   $("#view").innerHTML = V();
   const fb = fabFor(), fab = $("#fab");
   if(fb && canWrite){ fab.hidden = false; fab.dataset.add = fb[0]; if(fb[0]==="costs") fab.dataset.preset = ui.proj; else delete fab.dataset.preset; $("#fablbl").textContent = fb[1]; } else fab.hidden = true;
   resolveNames();
 }
 function go(v, f){
-  ui.view = v; if(f){ if(v==="recv") ui.recvF=f; if(v==="pay") ui.payF=f; if(v==="tax") ui.taxF=f; if(v==="reports"){ ui.rep=f; ui.proj=null; } if(v==="p65") ui.fsec=f; }
+  if(v === "p65"){ v = "reports"; if(f) ui.fsec = f; f = "fc"; }
+  ui.view = v; if(f){ if(v==="recv"){ ui.recvF=f; ui.sSub="recv"; } if(v==="pay"){ ui.payF=f; ui.cSub="pay"; } if(v==="tax") ui.taxF=f; if(v==="reports"){ ui.rep=f; ui.proj=null; } }
+  if(v === "reports" && ui.rep === "proj"){ /* projects report stays under Reports */ }
   ls.set("nx-view", v); render(); window.scrollTo(0,0);
 }
 function toast(msg){ const r = $("#toastroot"); r.innerHTML = `<div class="toast" role="status">${esc(msg)}</div>`; clearTimeout(toast.t); toast.t = setTimeout(()=>{ r.innerHTML=""; }, 2600); }
@@ -1212,6 +1353,7 @@ async function save(after){
   const prev = sheet.rec, col = sheet.col;
   const keep = {}; if(prev){ ["unitId"].forEach(k => { if(prev[k] !== undefined) keep[k] = prev[k]; }); }
   const data = stamp(prev, Object.assign({}, keep, r.data, {example:false}), describeChange(col, prev, r.data));
+  { const lk = checkLock(col, prev, data); if(lk){ showErr(lk); return; } }
   if(after && after.check){ const m = after.check(data); if(m){ showErr(m); return; } }
   const btns = document.querySelectorAll("#sheetform button"); btns.forEach(b=>b.disabled=true);
   try{
@@ -1231,6 +1373,7 @@ const schedAfter = {
     if(!u.bookingDate) return "Enter the booking date.";
     if(N(u.instalments) > 0 && !u.firstInstDate) return "Enter the first instalment date.";
     if(N(u.bookingPct) < 0 || N(u.bookingPct) > 100) return "Booking % must be between 0 and 100.";
+    { const bad = buildSchedule(u).find(r => closedDate(r.dueDate)); if(bad) return lockMsg(bad.dueDate); }
     return null;
   },
   async run(u, id){
@@ -1245,6 +1388,7 @@ const schedAfter = {
   }
 };
 async function del(){
+  { const lk = checkLock(sheet.col, sheet.rec, null); if(lk){ showErr(lk); return; } }
   try{ await db.collection(sheet.col).doc(sheet.id).delete(); closeSheet(); toast("Deleted"); }
   catch(e){ showErr("Couldn't delete. Try again."); }
 }
@@ -1339,6 +1483,7 @@ async function doImport(){
   if(!imp) return; const btn = document.querySelector('[data-act="doimport"]'); const out = $("#imp-out");
   let n = 0;
   try{
+    const locked = imp.recs.filter(r => checkLock(imp.col, null, r)); if(locked.length){ toast(`${locked.length} row${locked.length>1?"s fall":" falls"} in a closed month and won't be imported`); imp.recs = imp.recs.filter(r => !checkLock(imp.col, null, r)); }
     for(const r of imp.recs){ await writeDoc(imp.col, null, stamp(null, Object.assign({}, r, {example:false}), "imported from Excel")); n++; if(btn) btn.textContent = `Importing… ${n}/${imp.recs.length}`; }
     out.innerHTML = `<p class="ok">Imported ${n} rows into ${esc(S[imp.col].sheet)}.</p>`; imp = null;
   }catch(e){ out.innerHTML = `<p class="err">Stopped after ${n} rows. ${esc(writeErr(e))}</p>`; }
@@ -1392,10 +1537,14 @@ document.addEventListener("click", e => {
   if(d.rp){ ui.recvP = d.rp; render(); return; }
   if(d.pf){ ui.payF = d.pf; render(); return; }
   if(d.tf){ ui.taxF = d.tf; render(); return; }
-  if(d.rep){ if(sheet) closeSheet(); ui.rep = d.rep; ui.proj = null; ui.view = "reports"; render(); window.scrollTo(0,0); return; }
+  if(d.rep){ if(sheet) closeSheet(); if(d.rep === "units"){ ui.view = "recv"; ui.sSub = "units"; ui.proj = null; render(); window.scrollTo(0,0); return; } ui.rep = d.rep; ui.proj = null; ui.view = "reports"; render(); window.scrollTo(0,0); return; }
   if(d.fy){ ui.fy = d.fy; render(); return; }
   if(d.proj){ ui.proj = d.proj; render(); window.scrollTo(0,0); return; }
-  if(d.units){ ui.rep = "units"; ui.uProj = d.units; ui.proj = null; render(); window.scrollTo(0,0); return; }
+  if(d.units){ ui.view = "recv"; ui.sSub = "units"; ui.uProj = d.units; ui.proj = null; ls.set("nx-view","recv"); render(); window.scrollTo(0,0); return; }
+  if(d.ssub){ ui.sSub = d.ssub; ui.proj = null; render(); window.scrollTo(0,0); return; }
+  if(d.csub){ ui.cSub = d.csub; ui.proj = null; render(); window.scrollTo(0,0); return; }
+  if(d.cm){ ui.cm = d.cm === "-" ? null : d.cm; render(); window.scrollTo(0,0); return; }
+  if(d.ck){ toggleCheck(d.ck); return; }
   if(d.uproj){ ui.uProj = d.uproj; render(); return; }
   if(d.uf){ ui.uF = d.uf; render(); return; }
   if(d.add){ if(!db){ toast("Data isn't connected in this view"); return; } openForm(d.add, null, d.preset); return; }
@@ -1420,6 +1569,8 @@ document.addEventListener("click", e => {
     case "exno": render(); return;
     case "data": openData(); return;
     case "importnow": importNow(); return;
+    case "closemonth": closeMonth(t.dataset.m); return;
+    case "reopen": reopenMonth(t.dataset.m); return;
     case "export": doExport(); return;
     case "template": doTemplate(); return;
     case "pickfile": $("#imp-file").click(); return;
@@ -1480,7 +1631,7 @@ function queueDirectors(){
   }, 4000);
 }
 /* ---------- full snapshot for the directors' page: an editor's view uploads the whole data set as one JSON asset (sync/snapshot points at it); the daily job encrypts it for the password-protected copy of this app ---------- */
-let assetsNS = null, snapTimer = null, snapLastKey = "", snapLastAt = 0, SNAPPTR = null;
+let loadedPeriods = false; let assetsNS = null, snapTimer = null, snapLastKey = "", snapLastAt = 0, SNAPPTR = null;
 function queueSnapshot(){
   if(!assetsNS || !db || !canWrite || !COLS.every(c => loaded[c])) return;
   clearTimeout(snapTimer);
@@ -1488,7 +1639,7 @@ function queueSnapshot(){
   snapTimer = setTimeout(async () => {
     try{
       const docs = { "sync/latest": SYNC, "feasibility/p65": FEAS, "feasibility/ffs2627": FFS };
-      const cols = {}; COLS.forEach(c => cols[c] = D[c]);
+      const cols = {}; COLS.forEach(c => cols[c] = D[c]); cols.periods = D.periods || [];
       const key = JSON.stringify({ cols, docs });
       if(key === snapLastKey) return;
       const at = new Date().toISOString();
@@ -1510,6 +1661,8 @@ render();
   try{ dl = await window.claude.use("downloads"); }catch(e){ dl = null; }
   try{ isOwnerView = userNS ? await userNS.isOwner() : false; if(isOwnerView) mcpNS = await window.claude.use("mcp"); }catch(e){ mcpNS = null; }
   if(canWrite){ try{ assetsNS = await window.claude.use("assets"); }catch(e){ assetsNS = null; } }
+  try{ canAdmin = userNS ? !!(await userNS.canEdit()) : false; }catch(e){ canAdmin = false; }
+  db.collection("periods").onSnapshot(snap => { D.periods = snap.docs.map(d => Object.assign({id:d.id}, d.data())); loadedPeriods = true; if(!sheet) render(); queueSnapshot(); }, () => { loadedPeriods = true; });
   if(assetsNS) db.doc("sync/snapshot").onSnapshot(snap => { SNAPPTR = snap.exists ? snap.data() : null; }, () => {});
   setSync("on", canWrite ? "Live" : "Live · view only");
   db.doc("sync/latest").onSnapshot(snap => { SYNC = snap.exists ? snap.data() : null; if(!sheet && ui.view === "home") render(); }, () => {});
