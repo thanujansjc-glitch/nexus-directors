@@ -626,6 +626,7 @@ function viewHome(){
   if(tNext.length) A.push(["warn", `Next tax deadline: ${tNext[0].item}`, `${fdate(tNext[0].dueDate)}${tNext.length>1?` · ${tNext.length-1} more in the next 30 days`:""}`, "tax","upcoming"]);
   if(stale.length) A.push(["warn", `${stale.length} bank balance${stale.length>1?"s":""} not updated in over a week`, stale.slice(0,3).map(b=>b.name).join(" · "), "cash"]);
   { const pm = mPrev(T.slice(0,7)); if(Number(T.slice(8,10)) >= 10 && D.periods && loadedPeriods && !isClosed(pm) && D.banks.length) A.push(["warn", `${mName(pm)} not closed yet`, "Work through the month-end checklist and close the month", "reports","close"]); }
+  { const oq = (D.periods || []).reduce((t,p) => t + (p.queries || []).filter(q => !q.done).length, 0); if(oq) { const pm = (D.periods || []).filter(p => (p.queries||[]).some(q => !q.done)).map(p => p.id).sort()[0]; A.push(["warn", `${oq} month-end quer${oq>1?"ies":"y"} open`, `Oldest in ${mName(pm)}`, "reports","close"]); } }
   if(!A.length && D.banks.length) A.push(["good","Nothing needs attention","No overdue items and no deadlines in the next two weeks","home"]);
 
   const act = []; COLS.forEach(c => D[c].forEach(r => { if(r.updatedBy && r.updatedAt) act.push([c,r]); }));
@@ -1116,6 +1117,7 @@ function viewCosts(){
 const MONL = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const mName = m => { const [y,mo] = m.split("-").map(Number); return `${MONL[mo-1]} ${y}`; };
 const mEnd = m => { const [y,mo] = m.split("-").map(Number); const d = new Date(Date.UTC(y, mo, 0)); return d.toISOString().slice(0,10); };
+const mNext = m => { const [y,mo] = m.split("-").map(Number); return mo === 12 ? `${y+1}-01` : `${y}-${String(mo+1).padStart(2,"0")}`; };
 const mPrev = m => { const [y,mo] = m.split("-").map(Number); return mo === 1 ? `${y-1}-12` : `${y}-${String(mo-1).padStart(2,"0")}`; };
 let canAdmin = false;
 const canClose = () => canWrite && !!db && (isOwnerView || canAdmin);
@@ -1155,20 +1157,66 @@ function monthChecks(m){
   const banks = real("banks"), bOk = banks.filter(b => (b.asOf||"") >= me).length;
   let rc = 0, rt = 0; real("recv").forEach(r => (r.receipts||[]).forEach(x => { if(x && x.date && x.date.slice(0,7) === m){ rc++; rt += N(x.amount); } }));
   const billsM = real("pay").filter(x => (x.dueDate||"").slice(0,7) === m).length;
-  const taxM = real("tax").filter(t => String(t.item||"").includes(name) || String(t.period||"").includes(name) || (t.period||"") === m);
+  const taxM = real("tax").filter(t => (t.dueDate||"").slice(0,7) === m);
   const taxOpen = taxM.filter(t => t.status !== "Paid" && t.status !== "Filed");
   const plOk = real("pl").some(r => r.month === m), bsOk = real("bs").some(r => (r.date||"").slice(0,7) === m);
   const over = real("recv").filter(r => outR(r) > 0.5 && r.dueDate && r.dueDate <= me).length;
+  const qs = ((periodOf(m) || {}).queries || []), qOpen = qs.filter(q => !q.done).length;
   return [
+    {k:"queries", l:"All queries resolved or carried forward", auto: qOpen === 0, d: qs.length ? (qOpen ? `${qOpen} of ${qs.length} still open` : `All ${qs.length} resolved`) : "No queries raised"},
     {k:"banks", l:"Bank balances updated to month end", auto: banks.length > 0 && bOk === banks.length, d:`${bOk} of ${banks.length} accounts have a balance at or after ${fdate(me)}`},
     {k:"rec", l:"Bank accounts reconciled to the bank books", d:"Tick when HNB and Peoples current accounts agree to the bank books"},
     {k:"recv", l:"Customer receipts for the month entered", d:`${rc} receipt${rc!==1?"s":""} dated in ${name} · LKR ${fm(rt)}`},
     {k:"pay", l:"Supplier bills and payments entered", d:`${billsM} bill${billsM!==1?"s":""} due in ${name} in the app`},
-    {k:"tax", l:`Tax for ${name} filed or paid`, auto: taxM.length > 0 && !taxOpen.length, d: taxM.length ? (taxOpen.length ? `${taxOpen.length} of ${taxM.length} still open: ${taxOpen.slice(0,2).map(t=>t.item).join(" · ")}` : `All ${taxM.length} items filed or paid`) : "No tax items named for this month"},
+    {k:"tax", l:`Tax due in ${name} filed or paid`, auto: !taxOpen.length, d: taxM.length ? (taxOpen.length ? `${taxOpen.length} of ${taxM.length} still open: ${taxOpen.slice(0,2).map(t=>t.item).join(" · ")}` : `All ${taxM.length} items due in the month filed or paid`) : "Nothing fell due in the month"},
     {k:"pl", l:"Income statement for the month entered", auto: plOk, d: plOk ? "Entered under Reports → Income statement" : "Not entered yet"},
     {k:"bs", l:"Balance sheet at month end entered", auto: bsOk, d: bsOk ? "Entered under Reports → Balance sheet" : "Not entered yet"},
+    (() => { const c = cfCompare(m); return {k:"cf", l:"Cash flow summary loaded and agreed to customer receipts", auto: !!c && c.totalOk && !c.diffs.length, d: !c ? "Not loaded yet" : c.diffs.length ? `Loaded; ${c.diffs.length} customer amount${c.diffs.length>1?"s":""} differ from the customer file` : c.totalOk ? "Loaded; receipts agree with the customer file" : "Loaded; receipts total differs"}; })(),
     {k:"review", l:"Overdue customers and supplier payments reviewed", d:`${over} customer instalment${over!==1?"s":""} unpaid at ${fdate(me)}`}
   ];
+}
+function cfCompare(m){
+  const cf = (periodOf(m) || {}).cashflow; if(!cf) return null;
+  const app = {}; (D.recv || []).filter(x => !x.example).forEach(r => (r.receipts||[]).forEach(x => { if(x && x.date && x.date.slice(0,7) === m){ const k = (r.project||"") + "|" + (r.customer||""); app[k] = (app[k]||0) + N(x.amount); } }));
+  const toks = s => String(s||"").toLowerCase().replace(/[^a-z ]/g," ").split(/\s+/).filter(w => w.length >= 5 && !["sqft","place","nelson","lawrence"].includes(w));
+  const used = new Set(), rows = [];
+  (cf.customers || []).forEach(c => {
+    const ct = toks(c.l);
+    const keys = Object.keys(app).filter(k => !used.has(k) && k.startsWith((c.project||"") + "|") && toks(k.split("|")[1]).some(w => ct.includes(w)));
+    keys.forEach(k => used.add(k));
+    const a = keys.reduce((t,k) => t + app[k], 0);
+    rows.push({ l:c.l, wb:N(c.a), app:a, who: keys.map(k => k.split("|")[1]).join(", ") });
+  });
+  Object.keys(app).filter(k => !used.has(k)).forEach(k => rows.push({ l:"Not in the cash flow", wb:0, app:app[k], who:k.split("|")[1] }));
+  const appTotal = Object.values(app).reduce((t,v) => t + v, 0);
+  return { cf, rows, diffs: rows.filter(r => Math.abs(r.wb - r.app) >= 1), appTotal, totalOk: Math.abs(N(cf.customersTotal) - appTotal) < 1 };
+}
+function qCard(m, cl){
+  const qs = ((periodOf(m) || {}).queries || []).slice().sort((a,b) => (a.done?1:0) - (b.done?1:0) || (a.raisedAt||"").localeCompare(b.raisedAt||""));
+  const open = qs.filter(q => !q.done), edit = !cl && canWrite && !!db;
+  const row = q => `<div class="item" style="cursor:default;align-items:flex-start">
+      <div style="display:flex;gap:10px;align-items:flex-start;min-width:0">
+        ${edit ? `<button class="btn small ${q.done?"primary":""}" data-q="${m}:${esc(q.id)}" aria-pressed="${!!q.done}" aria-label="${q.done?"Mark as open":"Mark as solved"}" style="flex:none;min-width:40px">${q.done?"✓":"☐"}</button>` : `<span style="flex:none;font-weight:700;color:${q.done?"var(--good)":"var(--warn)"}">${q.done?"✓":"☐"}</span>`}
+        <div style="min-width:0"><div class="t" style="${q.done?"text-decoration:line-through;color:var(--muted)":""}">${esc(q.text)}</div>
+        <div class="d">${q.carriedFrom ? `Carried from ${mName(q.carriedFrom)} · ` : ""}Raised ${fdate((q.raisedAt||"").slice(0,10))} by ${who(q.raisedBy)}${q.done ? ` · ${q.carriedTo ? `carried to ${mName(q.carriedTo)}` : "solved"} ${fdate((q.doneAt||"").slice(0,10))} by ${who(q.doneBy)}` : ""}</div></div>
+      </div>
+      <div class="amt">${N(q.amount) ? fm(q.amount) : ""}</div></div>`;
+  return `<section class="stack"><div class="spread"><h3>Queries${qs.length ? ` · ${open.length} open` : ""}</h3>${edit && open.length ? `<button class="btn small" data-act="qcarry" data-m="${m}">Carry open to ${mName(mNext(m))}</button>` : ""}</div>
+    ${qs.length ? `<div class="list">${qs.map(row).join("")}</div>` : `<p class="note" style="margin:0">No queries for this month.</p>`}
+    ${edit ? `<div class="card" style="display:grid;gap:8px"><input id="qtext" placeholder="New query, e.g. receipt of 27 Oct not identified" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);color:var(--fg)"><div class="row"><input id="qamt" inputmode="decimal" placeholder="Amount (optional)" style="flex:1;min-width:0;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);color:var(--fg)"><button class="btn primary small" data-act="qadd" data-m="${m}">Add query</button></div></div>` : ""}
+  </section>`;
+}
+function cfCard(m){
+  const c = cfCompare(m);
+  if(!c) return `<section class="card"><h3>Cash flow for ${mName(m)}</h3><p class="note" style="margin:6px 0 0">Not loaded yet. Drop the month's cash flow workbook into the Drive folder "4 Management accounts" and the import adds it here.</p></section>`;
+  const cf = c.cf, ln = (g,a,cls) => `<div class="${cls||""}"><span>${esc(g)}</span><span>${fm(a)}</span></div>`;
+  return `<section class="card"><div class="spread"><h3>Cash flow for ${mName(m)}</h3><span class="note">${esc(cf.source||"")}</span></div>
+    <div class="stmt one" style="margin-top:8px"><div class="sum"><span>Cash in</span><span></span></div>${(cf.inflows||[]).filter(x=>N(x.a)).map(x=>ln(x.g,x.a)).join("")}${ln("Total cash in",cf.totalIn,"sum")}
+    <div class="sum" style="margin-top:8px"><span>Cash out</span><span></span></div>${(cf.outflows||[]).filter(x=>N(x.a)).map(x=>ln(x.g,x.a)).join("")}${ln("Total cash out",cf.totalOut,"sum")}
+    ${ln("Net cash flow for the month",cf.net,"sum")}</div></section>
+  <section class="card"><h3>Customer receipts check</h3>
+    <p class="note" style="margin:6px 0 0">Cash flow LKR ${fm(cf.customersTotal)} · customer file LKR ${fm(c.appTotal)} · ${c.totalOk ? "totals agree" : `<span class="neg">difference LKR ${fm(N(cf.customersTotal) - c.appTotal)}</span>`}</p>
+    ${c.diffs.length ? `<div class="stmt one" style="margin-top:8px">${c.diffs.map(r=>`<div><span>${esc(r.l)}${r.who?` <span class="note">(customer file: ${esc(r.who)})</span>`:""}</span><b class="neg">${fm(r.wb)} vs ${fm(r.app)}</b></div>`).join("")}</div><p class="note" style="margin:8px 0 0">Amounts by customer differ: check which customer each receipt belongs to, then correct the customer file or the cash flow.</p>` : `<p class="note" style="margin:6px 0 0">Every customer agrees.</p>`}</section>`;
 }
 function checkState(m){
   const per = periodOf(m) || {}, ticks = per.checks || {};
@@ -1191,7 +1239,7 @@ function repClose(){
   const ms = closeMonths();
   return `<p class="note" style="margin:0">Work through the checklist for each month, then close it. A closed month is locked: its income statement, balance sheet, bank balances, tax filings and the instalments and bills due in it can't be changed until someone reopens it.</p>
   <div class="list">${ms.map(m => { const st = checkState(m), cl = st.per.status === "Closed";
-    return `<button class="item" data-cm="${m}"><div><div class="t">${mName(m)}</div><div class="d">${cl ? `Closed ${st.per.closedAt ? fdate(st.per.closedAt.slice(0,10)) : ""}` : `${st.done} of ${st.items.length} checks done`}</div></div><div class="amt">${cl ? chip("Closed","good") : m === T.slice(0,7) ? chip("Current") : chip("Open","warn")}</div></button>`; }).join("")}</div>`;
+    return `<button class="item" data-cm="${m}"><div><div class="t">${mName(m)}</div><div class="d">${cl ? `Closed ${st.per.closedAt ? fdate(st.per.closedAt.slice(0,10)) : ""}` : `${st.done} of ${st.items.length} checks done`}${((st.per.queries||[]).filter(q=>!q.done).length) ? ` · ${(st.per.queries||[]).filter(q=>!q.done).length} open quer${(st.per.queries||[]).filter(q=>!q.done).length>1?"ies":"y"}` : ""}</div></div><div class="amt">${cl ? chip("Closed","good") : m === T.slice(0,7) ? chip("Current") : chip("Open","warn")}</div></button>`; }).join("")}</div>`;
 }
 function closeDetail(m){
   const st = checkState(m), cl = st.per.status === "Closed", all = st.done === st.items.length, f = st.per.figures;
@@ -1201,6 +1249,8 @@ function closeDetail(m){
     <div class="meta">${cl ? `Closed on ${fdate((st.per.closedAt||"").slice(0,10))} by ${who(st.per.closedBy)}. Figures dated in this month are locked.` : `${st.done} of ${st.items.length} checks done${m >= T.slice(0,7) ? " · the month hasn't ended yet" : ""}`}</div></section>
   <div class="list">${st.items.map(i => `<div class="item" style="cursor:default"><div><div class="t">${i.done ? "✓ " : ""}${esc(i.l)}</div><div class="d">${esc(i.d)}${i.auto ? " · checked automatically" : ""}</div></div>
     <div class="amt">${i.auto ? chip("Done","good") : (!cl && canWrite && db) ? `<button class="btn small ${i.ticked?"primary":""}" data-ck="${m}:${i.k}">${i.ticked ? "Done" : "Tick"}</button>` : i.ticked ? chip("Done","good") : chip("Open","warn")}</div></div>`).join("")}</div>
+  ${qCard(m, cl)}
+  ${cfCard(m)}
   ${cl && f ? `<section class="card"><h3>Figures when closed</h3><div class="stmt one" style="margin-top:6px"><div><span>Cash at bank</span><b>${fm(f.cash)}</b></div><div><span>Owed by customers</span><b>${fm(f.recvOpen)}</b></div><div><span>of which due by month end</span><b>${fm(f.recvOverdue)}</b></div><div><span>Owed to suppliers</span><b>${fm(f.payOpen)}</b></div>${f.revenue!=null?`<div><span>Revenue for the month</span><b>${fm(f.revenue)}</b></div><div><span>Profit after tax for the month</span><b>${fm(f.pat)}</b></div>`:""}</div></section>` : ""}
   ${canClose() ? (cl
       ? `<section class="card stack"><h3>Reopen ${mName(m)}</h3><label class="note" for="reopenwhy">Reason (kept in the history)</label><input id="reopenwhy" class="in" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);color:var(--fg)" placeholder="e.g. late supplier invoice"><button class="btn" data-act="reopen" data-m="${m}">Reopen month</button></section>`
@@ -1210,7 +1260,7 @@ function closeDetail(m){
 }
 async function savePeriod(m, patch, what){
   const cur = periodOf(m) || {};
-  const data = Object.assign({}, cur, patch, { month: m });
+  const data = Object.assign({ status: "Open" }, cur, patch, { month: m });
   delete data.id;
   data.log = (Array.isArray(cur.log) ? cur.log : []).concat([{ by: uid || null, at: new Date().toISOString(), what }]).slice(-30);
   data.updatedAt = new Date().toISOString(); data.updatedBy = uid || null;
@@ -1222,6 +1272,33 @@ async function toggleCheck(arg){
   const item = monthChecks(m).find(c => c.k === k) || {l:k};
   try{ await savePeriod(m, { checks: Object.assign({}, cur, { [k]: { done: now, by: uid || null, at: new Date().toISOString() } }), status: (periodOf(m)||{}).status || "Open" }, `${now ? "Ticked" : "Unticked"}: ${item.l}`); }
   catch(e){ toast("Couldn't save. Try again."); }
+}
+const qid = () => "q" + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+async function addQuery(m){
+  const t = ($("#qtext") && $("#qtext").value.trim()) || ""; if(!t){ toast("Type the query first"); return; }
+  if(isClosed(m)) return;
+  const amt = N(String(($("#qamt") && $("#qamt").value) || "").replace(/,/g,""));
+  const qs = ((periodOf(m) || {}).queries || []).concat([{ id: qid(), text: t, amount: amt || 0, raisedBy: uid || null, raisedAt: new Date().toISOString(), done: false }]);
+  try{ await savePeriod(m, { queries: qs }, `Query raised: ${t}`); toast("Query added"); }catch(e){ toast("Couldn't save. Try again."); }
+}
+async function toggleQuery(arg){
+  const i = arg.indexOf(":"), m = arg.slice(0,i), id = arg.slice(i+1); if(isClosed(m) || !canWrite || !db) return;
+  const qs = ((periodOf(m) || {}).queries || []).map(q => Object.assign({}, q)); const q = qs.find(x => x.id === id); if(!q) return;
+  q.done = !q.done; if(q.done){ q.doneBy = uid || null; q.doneAt = new Date().toISOString(); } else { delete q.doneBy; delete q.doneAt; delete q.carriedTo; }
+  try{ await savePeriod(m, { queries: qs }, `${q.done ? "Query solved" : "Query reopened"}: ${q.text}`); }catch(e){ toast("Couldn't save. Try again."); }
+}
+async function carryQueries(m){
+  if(isClosed(m)) return;
+  const n = mNext(m), now = new Date().toISOString();
+  const qs = ((periodOf(m) || {}).queries || []).map(q => Object.assign({}, q)), open = qs.filter(q => !q.done); if(!open.length) return;
+  if(isClosed(n)){ toast(`${mName(n)} is closed`); return; }
+  const add = open.map(q => ({ id: qid(), text: q.text, amount: N(q.amount), raisedBy: q.raisedBy || null, raisedAt: q.raisedAt || now, done: false, carriedFrom: m }));
+  open.forEach(q => { q.done = true; q.carriedTo = n; q.doneBy = uid || null; q.doneAt = now; });
+  try{
+    await savePeriod(n, { queries: ((periodOf(n) || {}).queries || []).concat(add), status: (periodOf(n)||{}).status || "Open" }, `${add.length} quer${add.length>1?"ies":"y"} carried from ${mName(m)}`);
+    await savePeriod(m, { queries: qs }, `${add.length} open quer${add.length>1?"ies":"y"} carried to ${mName(n)}`);
+    toast(`Carried to ${mName(n)}`);
+  }catch(e){ toast("Couldn't carry the queries. Try again."); }
 }
 async function closeMonth(m){
   const st = checkState(m); if(st.done !== st.items.length || !canClose()) return;
@@ -1545,6 +1622,7 @@ document.addEventListener("click", e => {
   if(d.csub){ ui.cSub = d.csub; ui.proj = null; render(); window.scrollTo(0,0); return; }
   if(d.cm){ ui.cm = d.cm === "-" ? null : d.cm; render(); window.scrollTo(0,0); return; }
   if(d.ck){ toggleCheck(d.ck); return; }
+  if(d.q){ toggleQuery(d.q); return; }
   if(d.uproj){ ui.uProj = d.uproj; render(); return; }
   if(d.uf){ ui.uF = d.uf; render(); return; }
   if(d.add){ if(!db){ toast("Data isn't connected in this view"); return; } openForm(d.add, null, d.preset); return; }
@@ -1571,6 +1649,8 @@ document.addEventListener("click", e => {
     case "importnow": importNow(); return;
     case "closemonth": closeMonth(t.dataset.m); return;
     case "reopen": reopenMonth(t.dataset.m); return;
+    case "qadd": addQuery(t.dataset.m); return;
+    case "qcarry": carryQueries(t.dataset.m); return;
     case "export": doExport(); return;
     case "template": doTemplate(); return;
     case "pickfile": $("#imp-file").click(); return;
