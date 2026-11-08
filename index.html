@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#1f242b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Nexus">
+<title>Nexus Directors</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%233fb950'/%3E%3Ctext x='32' y='44' font-family='Arial' font-weight='700' font-size='34' text-anchor='middle' fill='%230d1a10'%3EN%3C/text%3E%3C/svg%3E"><style>
+:root{
+  --bg:#1f242b; --surface:#252b33; --surface-2:#2b323b; --line:#161a1f; --fg:#f4f6f8; --muted:#9aa3ad;
+  --good:#3fb950; --good-ink:#0d1a10; --warn:#e3a33b; --bad:#ef5f56; color-scheme:dark;
+  --f:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f);font-size:15px;line-height:1.45;-webkit-text-size-adjust:100%;font-variant-numeric:tabular-nums}
+button,input{font:inherit;color:inherit}
+.wrap{max-width:720px;margin:0 auto;padding:16px 16px calc(32px + env(safe-area-inset-bottom,0px))}
+header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px}
+header .in{max-width:720px;margin:0 auto;display:flex;align-items:center;gap:12px}
+.mark{width:34px;height:34px;border-radius:9px;background:var(--good);color:var(--good-ink);display:grid;place-items:center;font-weight:700;flex:none}
+.ttl{flex:1;min-width:0}.ttl b{display:block;font-size:17px}.ttl span{display:block;font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.btn{border:1px solid var(--surface-2);background:var(--surface);border-radius:10px;padding:8px 12px;font-weight:600;font-size:13px;cursor:pointer}
+.btn.primary{background:var(--good);color:var(--good-ink);border-color:var(--good);width:100%;padding:12px;font-size:15px}
+h2{font-size:13px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:26px 0 8px;font-weight:600}
+.card{background:var(--surface);border-radius:14px;padding:16px}
+.hero{border-left:4px solid var(--good)}
+.eyebrow{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.big{font-size:32px;font-weight:700;letter-spacing:-.02em;margin-top:2px}
+.meta{font-size:13px;color:var(--muted);margin-top:4px}
+.kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
+.kpi{background:var(--surface);border-radius:14px;padding:14px}
+.kpi .v{font-size:21px;font-weight:700;margin-top:2px}
+.kpi .s{font-size:12.5px;color:var(--muted)}
+.list{background:var(--surface);border-radius:14px;overflow:hidden}
+.row{display:flex;justify-content:space-between;gap:12px;padding:12px 16px;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.row .l{min-width:0}.row .l b{display:block;font-weight:600;overflow-wrap:anywhere}.row .l span{display:block;font-size:12.5px;color:var(--muted)}
+.row .r{text-align:right;flex:none;font-weight:700}.row .r span{display:block;font-size:12.5px;font-weight:500;color:var(--muted)}
+.row.tot{background:var(--surface-2)}
+.bad{color:var(--bad)}.good{color:var(--good)}.warn{color:var(--warn)}
+.bar{height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden;margin-top:6px}.bar i{display:block;height:100%;background:var(--good)}
+.note{font-size:12.5px;color:var(--muted);margin-top:8px}
+.lock{min-height:100vh;display:grid;place-items:center;padding:24px 16px}
+.lock .card{width:100%;max-width:380px;display:grid;gap:14px}
+.lock input[type=password]{width:100%;background:var(--bg);border:1px solid var(--surface-2);border-radius:10px;padding:12px;font-size:16px}
+.lock label.chk{display:flex;gap:8px;align-items:center;font-size:14px;color:var(--muted)}
+.err{color:var(--bad);font-size:14px;min-height:1.2em}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div id="lock" class="lock">
+  <form class="card" id="f">
+    <div style="display:flex;gap:12px;align-items:center"><div class="mark">N</div><div><b style="font-size:17px">Nexus Property Developers</b><div class="meta" style="margin:0">Directors' view</div></div></div>
+    <input type="password" id="pw" placeholder="Password" autocomplete="current-password" aria-label="Password" required>
+    <label class="chk"><input type="checkbox" id="rem"> Remember on this phone</label>
+    <button class="btn primary" id="go" type="submit">Open</button>
+    <div class="err" id="err" role="alert"></div>
+  </form>
+</div>
+<div id="app" hidden>
+  <header><div class="in"><div class="mark">N</div><div class="ttl"><b>Nexus Directors</b><span id="asat"></span></div><button class="btn" id="out" type="button">Lock</button></div></header>
+  <main class="wrap" id="main"></main>
+</div>
+<script>
+(function(){
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const N = v => (typeof v === "number" && isFinite(v)) ? v : 0;
+const fm = n => Math.round(N(n)).toLocaleString("en-US");
+const mn = n => (N(n)/1e6).toLocaleString("en-US",{minimumFractionDigits:1,maximumFractionDigits:1}) + "m";
+const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const dt = s => { if(!s) return "Date TBC"; const [y,m,d] = s.slice(0,10).split("-").map(Number); return `${d} ${MON[m-1]} ${y}`; };
+const days = (a,b) => Math.round((new Date(b+"T00:00") - new Date(a+"T00:00"))/864e5);
+const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+const store = { get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }, set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }, del(k){ try{ localStorage.removeItem(k); }catch(e){} } };
+
+async function decrypt(pw){
+  const r = await fetch("data.enc.json?t=" + Date.now(), {cache:"no-store"});
+  if(!r.ok) throw new Error("load");
+  const e = await r.json();
+  const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveKey"]);
+  const key = await crypto.subtle.deriveKey({name:"PBKDF2", salt:b64(e.salt), iterations:e.iter, hash:"SHA-256"}, base, {name:"AES-GCM", length:256}, false, ["decrypt"]);
+  let plain;
+  try{ plain = await crypto.subtle.decrypt({name:"AES-GCM", iv:b64(e.iv)}, key, b64(e.ct)); }catch(x){ throw new Error("pw"); }
+  return JSON.parse(new TextDecoder().decode(plain));
+}
+
+function rows(items, fn){ return items.length ? `<div class="list">${items.map(fn).join("")}</div>` : ""; }
+
+function render(d){
+  const today = new Date().toISOString().slice(0,10);
+  const cash = d.banks.reduce((s,b)=>s+N(b.balance),0), R = d.recv, P = d.pay;
+  const stale = d.banks.filter(b => b.asOf && days(b.asOf, today) > 7).length;
+  $("#asat").textContent = "Figures as at " + dt((d.updatedAt||d.today||"").slice(0,10));
+  let h = `
+  <section class="card hero">
+    <div class="eyebrow">Cash at bank</div>
+    <div class="big">LKR ${fm(cash)}</div>
+    <div class="meta">${d.banks.length} accounts${stale ? ` · ${stale} with balances more than a week old` : ""}</div>
+  </section>
+  <div class="kpis">
+    <div class="kpi"><div class="eyebrow">Owed by customers</div><div class="v">${mn(R.open)}</div><div class="s">all open instalments</div></div>
+    <div class="kpi"><div class="eyebrow">Overdue</div><div class="v ${R.overdue>0?"bad":""}">${mn(R.overdue)}</div><div class="s">${R.overdueCount} instalments</div></div>
+    <div class="kpi"><div class="eyebrow">Due in 30 days</div><div class="v">${mn(R.due30)}</div><div class="s">from customers</div></div>
+    <div class="kpi"><div class="eyebrow">Owed to suppliers</div><div class="v">${mn(P.open)}</div><div class="s">${P.overdue>0?`<span class="bad">${mn(P.overdue)} overdue</span>`:"none overdue"}</div></div>
+  </div>`;
+
+  h += `<h2>Bank accounts</h2>` + rows(d.banks, b => `<div class="row"><div class="l"><b>${esc(b.name)}</b><span>${esc(b.bank)} · as at ${dt(b.asOf)}</span></div><div class="r">${fm(b.balance)}</div></div>`)
+     + `<div class="list" style="margin-top:8px"><div class="row tot"><div class="l"><b>Total</b></div><div class="r">${fm(cash)}</div></div></div>`;
+
+  if(d.projects && d.projects.length){
+    h += `<h2>Projects</h2>` + d.projects.map(p => {
+      const pct = p.salesValue ? Math.min(100, p.collected/p.salesValue*100) : 0;
+      const spent = p.budget ? Math.min(100, p.cost/p.budget*100) : 0;
+      return `<div class="card" style="margin-top:10px"><div style="display:flex;justify-content:space-between;gap:10px"><b>${esc(p.name)}</b><span class="meta" style="margin:0">${esc(p.status)}</span></div>
+        <div class="kpis" style="margin-top:8px">
+          <div><div class="eyebrow">Units sold</div><div style="font-weight:700;font-size:18px">${p.sold} of ${p.units}</div></div>
+          <div><div class="eyebrow">Sales value</div><div style="font-weight:700;font-size:18px">${mn(p.salesValue)}</div></div>
+        </div>
+        ${p.collected ? `<div class="meta">Collected ${mn(p.collected)} (${pct.toFixed(0)}% of sales value)</div><div class="bar"><i style="width:${pct}%"></i></div>` : ""}
+        ${p.budget ? `<div class="meta">Cost to date ${mn(p.cost)} of ${mn(p.budget)} budget (${spent.toFixed(0)}%)</div><div class="bar"><i style="width:${spent}%;background:var(--warn)"></i></div>` : ""}
+      </div>`; }).join("");
+  }
+
+  if(R.byProject && R.byProject.length){
+    h += `<h2>Owed by customers, by project</h2>` + rows(R.byProject, x => `<div class="row"><div class="l"><b>${esc(x.project)}</b><span>${x.overdue>0?`<span class="bad">${fm(x.overdue)} overdue</span>`:"nothing overdue"}</span></div><div class="r">${fm(x.open)}</div></div>`);
+    if(R.tbc) h += `<div class="note">Includes LKR ${fm(R.tbc)} with no due date yet (mostly payable at key handover).</div>`;
+  }
+
+  if(R.topOverdue && R.topOverdue.length)
+    h += `<h2>Largest overdue instalments</h2>` + rows(R.topOverdue, x => `<div class="row"><div class="l"><b>${esc(x.customer)}</b><span>${esc(x.project)} ${esc(x.unit)} · ${esc(x.ref)} · due ${dt(x.dueDate)}</span></div><div class="r bad">${fm(x.out)}<span>${days(x.dueDate, today)} days</span></div></div>`);
+
+  if(R.next30 && R.next30.length)
+    h += `<h2>Coming in over the next 30 days</h2>` + rows(R.next30, x => `<div class="row"><div class="l"><b>${esc(x.customer)}</b><span>${esc(x.project)} ${esc(x.unit)} · ${dt(x.dueDate)}</span></div><div class="r">${fm(x.out)}</div></div>`);
+
+  if(P.list && P.list.length)
+    h += `<h2>Supplier payments due</h2>` + rows(P.list, x => `<div class="row"><div class="l"><b>${esc(x.supplier)}</b><span>${esc(x.project)}${x.ref?` · ${esc(x.ref)}`:""} · ${dt(x.dueDate)}</span></div><div class="r ${x.dueDate && x.dueDate < today ? "bad" : ""}">${fm(x.out)}</div></div>`);
+
+  if(d.tax && d.tax.length)
+    h += `<h2>Tax deadlines</h2>` + rows(d.tax, x => { const od = x.dueDate < today; return `<div class="row"><div class="l"><b>${esc(x.item)}</b><span>${dt(x.dueDate)} · ${esc(x.status)}</span></div><div class="r ${od?"bad":""}">${x.amount?fm(x.amount):"–"}<span>${od?"overdue":""}</span></div></div>`; });
+
+  if(d.loans && d.loans.length)
+    h += `<h2>Loans</h2>` + rows(d.loans, x => `<div class="row"><div class="l"><b>${esc(x.name)}</b><span>${esc(x.status)} · ${x.rate}% a year</span></div><div class="r">${fm(x.facility)}<span>${x.out?`${fm(x.out)} outstanding`:"not drawn"}</span></div></div>`);
+
+  h += `<p class="note" style="margin-top:24px">Amounts in Sri Lankan rupees. Summary from the Nexus Finance Desk, refreshed every morning. Confidential: please don't forward the password.</p>`;
+  $("#main").innerHTML = h;
+}
+
+async function open(pw, remember){
+  $("#err").textContent = ""; $("#go").disabled = true; $("#go").textContent = "Opening…";
+  try{
+    const d = await decrypt(pw);
+    if(remember) store.set("nx-dir-pw", pw);
+    render(d); $("#lock").hidden = true; $("#app").hidden = false; window.scrollTo(0,0);
+  }catch(e){
+    store.del("nx-dir-pw");
+    $("#err").textContent = e.message === "pw" ? "That password isn't right." : "Couldn't load the figures. Check your connection and try again.";
+  }finally{ $("#go").disabled = false; $("#go").textContent = "Open"; }
+}
+$("#f").addEventListener("submit", ev => { ev.preventDefault(); open($("#pw").value, $("#rem").checked); });
+$("#out").addEventListener("click", () => { store.del("nx-dir-pw"); $("#main").innerHTML = ""; $("#pw").value = ""; $("#app").hidden = true; $("#lock").hidden = false; });
+const saved = store.get("nx-dir-pw"); if(saved){ $("#rem").checked = true; open(saved, true); }
+})();
+</script>
+</body>
+</html>
