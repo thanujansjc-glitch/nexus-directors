@@ -964,8 +964,8 @@ function p65Card(){
   const p = D.projects.find(x => x.name === P65) || {};
   return `<button class="card" style="text-align:left;width:100%;display:block" data-go="p65">
     <div class="spread"><h3>New project: 65 St Lawrence</h3>${chip(p.status||"Planning","warn")}</div>
-    <div class="pm"><div><span class="l">Sales value</span><div class="n">LKR 2,227.5m</div></div><div><span class="l">Total cost</span><div class="n">LKR 1,839.5m</div></div><div><span class="l">Profit after tax</span><div class="n">LKR 271.6m (12.2%)</div></div><div><span class="l">Start / completion</span><div class="n">Jan 2027 / Jan 2031</div></div></div>
-    <div class="note" style="margin-top:8px">Projections from the HNB submission, not actuals. Tap for the full detail.</div></button>`;
+    ${(() => { const h = FEAS.headline || {}; return `<div class="pm"><div><span class="l">Sales value</span><div class="n">LKR ${esc(h.gdv||"")}</div></div><div><span class="l">Total cost</span><div class="n">LKR ${esc(h.cost||"")}</div></div><div><span class="l">Profit after tax</span><div class="n">LKR ${esc(h.pat||"")} (${esc(h.margin||"")})</div></div><div><span class="l">Start / completion</span><div class="n">${esc(h.start||"")} / ${esc(h.completion||"")}</div></div></div>
+    <div class="note" style="margin-top:8px">${h.units ? h.units + " apartments · " : ""}projections from the ${esc(FEAS.dated||"")} report to ${esc(FEAS.submittedTo||"")}, not actuals. Tap for the full detail.</div>`; })()}</button>`;
 }
 function p65Legend(items){ return `<div class="chart-legend">${items.map(([c,l,ln])=>`<span><i class="${ln?"ln":""}" style="background:${c}"></i>${esc(l)}</span>`).join("")}</div>`; }
 function p65Chart(F, bars, line, label){
@@ -1022,18 +1022,25 @@ function p65Costs(F){
   return `<section class="stack"><h3>Uses of funds</h3>${p65Stmt(F.uses.map(su),["LKR mn","Amount","% of total"])}</section>
   <section class="stack"><h3>Sources of funds</h3>${p65Stmt(F.sources.map(su),["LKR mn","Amount","% of total"])}</section>
   <section class="stack"><h3>Projected profit and loss</h3>${p65Stmt(F.pl.map(r=>`<tr class="${r[4]?"tot":""}"><td style="white-space:normal">${esc(r[0])}</td><td class="${r[1]<0?"neg":""}">${f1(r[1])}</td><td>${esc(r[2])}</td><td class="${r[3]<0?"neg":""}">${fm(r[3])}</td></tr>`),["LKR mn","Amount","% of revenue","LKR per sq.ft"])}</section>
-  <section class="card"><h3>Key indicators</h3>${kv(F.indicators)}<p class="note" style="margin:8px 0 0">The 0 quarters of negative cash flow is as stated in the submission; see Points to settle on the Overview.</p></section>
+  <section class="card"><h3>Key indicators</h3>${kv(F.indicators)}${F.indicatorsNote ? `<p class="note" style="margin:8px 0 0">${esc(F.indicatorsNote)}</p>` : ""}</section>
   <section class="card"><h3>Proposed bank facility</h3>${kv(F.facility)}<p class="note" style="margin:8px 0 0">Security: ${esc(F.security)}</p></section>`;
 }
 function p65Sales(F){
-  return `<section class="stack"><h3>Units booked</h3>${p65Table(F,F.sales,true)}<p class="note" style="margin:0">Management assumption: 5 pre-booked units, 3 a quarter to Q9, then 2 a quarter to Q15 (sold out before completion).</p></section>
+  return `<section class="stack"><h3>Units booked</h3>${p65Table(F,F.sales,true)}<p class="note" style="margin:0">${esc(F.salesNote || "")}</p></section>
   <section class="stack"><h3>Collections by booking quarter</h3>${p65Table(F,F.collections.map(r=>r.sum?r:Object.assign({},r,{t:sum(r.v,v=>v)})),true)}<p class="note" style="margin:0">Buyer plan: 50% booking advance, 40% equal quarterly instalments until completion, 10% on handover split over two quarters.</p></section>`;
 }
 function p65Cash(F){
   const yrs = ["2027","2028","2029","2030","2031","2032"];
   return `<section class="stack"><h3>Quarterly project cash flow</h3>${p65Table(F,F.cash,true)}<p class="note" style="margin:0">Interest is charged monthly on opening balances; any shortfall is drawn on the overdraft and surplus cash repays it first.</p></section>
-  <section class="stack"><h3>Cash cover ratio by quarter</h3>${p65Table(F,[{l:"(Opening cash + A) ÷ B",v:F.cover}],false,v=>`<td>${v?v.toFixed(2)+"x":"–"}</td>`)}<p class="note" style="margin:0">Minimum 7.04x in the repayment quarters. Overall DSCR over the project life 1.45x.</p></section>
+  <section class="stack"><h3>Debt service cover by quarter</h3>${p65Table(F,(F.dscr ? [{l:"DSCR: A ÷ B",v:F.dscr}] : []).concat([{l:"Cash cover: (opening cash + A) ÷ B",v:F.cover}]),false,v=>`<td class="${v && v < 1 ? "neg" : ""}">${v?v.toFixed(2)+"x":"–"}</td>`)}<p class="note" style="margin:0">${esc(F.coverNote || "")}</p></section>
   <section class="stack"><h3>Annual summary</h3><p class="note" style="margin:0">Calendar year, by quarters ending in that year.</p>${p65Stmt(F.annual.map(r=>`<tr><td style="white-space:normal">${esc(r.l)}</td>${r.v.map(f1c).join("")}${r.t===null?"<td></td>":f1c(r.t)}</tr>`),["LKR mn"].concat(yrs,["Total"]))}</section>`;
+}
+function p65Dev(F){
+  const D2 = F.devcost; if(!D2) return `<div class="list"><div class="empty">No line-item budget in this report.</div></div>`;
+  const r4 = (r,cls) => `<tr class="${cls||""}"><td style="white-space:normal">${esc(r[0])}</td><td>${fm(r[1])}</td><td>${f1(r[2])}</td><td>${esc(r[3])}</td></tr>`;
+  return `<p class="note" style="margin:0">${esc(D2.note||"")}</p>
+  <section class="stack"><h3>By group</h3>${p65Stmt(D2.groups.map(g => r4(g.t)).concat(D2.totals.slice(1).map(t => r4(t, t[4]?"tot":""))),["Cost group","LKR/sq.ft","LKR mn","% of construction"])}</section>
+  ${D2.groups.map(g => `<section class="stack"><h3>${esc(g.g)} · ${f1(g.t[2])} mn</h3>${p65Stmt(g.items.map(i => r4(i)),["Cost line","LKR/sq.ft","LKR mn","%"])}</section>`).join("")}`;
 }
 function p65Vat(F){
   return `<section class="stack"><h3>VAT and SSCL by quarter</h3>${p65Table(F,F.vat,true)}<p class="note" style="margin:0">Output tax on collections (land share exempt); input VAT on the eligible share of construction cost; excess credit carried forward.</p></section>
@@ -1048,7 +1055,7 @@ function p65Sens(F){
 function viewP65(){
   const F = FEAS;
   if(!F) return `<h2>65 St Lawrence</h2><div class="list"><div class="empty">${FEAS_READY || connState==="offline" ? "The project figures aren't available here." : "Loading the project figures…"}</div></div>`;
-  const tabs = [["over","Overview",p65Overview],["asm","Assumptions",p65Assumptions],["cost","Costs & profit",p65Costs],["sales","Sales",p65Sales],["cash","Cash flow",p65Cash],["vat","VAT & SSCL",p65Vat],["sens","Sensitivity",p65Sens]];
+  const tabs = [["over","Overview",p65Overview],["asm","Assumptions",p65Assumptions],["cost","Costs & profit",p65Costs],["sales","Sales",p65Sales],["dev","Development cost",p65Dev],["cash","Cash flow",p65Cash],["vat","VAT & SSCL",p65Vat],["sens","Sensitivity",p65Sens]];
   const cur = tabs.find(t => t[0] === ui.p65) || tabs[0];
   return `<section class="hero" style="border-left-color:var(--brass)">
       <div class="eyebrow">New project · projections, not actuals</div>
