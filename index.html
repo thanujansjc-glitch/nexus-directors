@@ -95,7 +95,6 @@ html,body{margin:0;background:#1f242b;color:#f4f6f8}
   </form>
 </div>
 <div id="nxbar" hidden></div>
-
 <title>Nexus Finance Desk</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap">
@@ -212,6 +211,15 @@ td.neg,.neg{color:var(--bad)}
 .ucard .u{font-family:var(--f-display);font-weight:700;font-size:17px;display:flex;justify-content:space-between;align-items:center;gap:6px}
 .ucard .m{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ucard.Booked{border-color:var(--accent)} .ucard.Sold{border-color:var(--good)} .ucard.Reserved{border-color:var(--warn)}
+.g65{display:grid;grid-template-columns:34px repeat(4,minmax(0,1fr));gap:5px}
+.g65h{font-size:12px;font-weight:700;text-align:center;color:var(--fg)}.g65h small,.g65f small{display:block;font-weight:500;color:var(--muted);font-size:10px}
+.g65f{font-family:var(--f-display);font-weight:700;font-size:15px;display:flex;flex-direction:column;justify-content:center;align-items:center;color:var(--muted)}
+.t65{border:1px solid var(--line);background:var(--surface-2);border-radius:10px;padding:7px 6px;min-height:50px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;text-align:center;min-width:0;font-size:12px;color:var(--muted)}
+.t65 .n{font-family:var(--f-display);font-weight:700;font-size:15px;color:var(--fg)}.t65 .m{font-size:11px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.t65.Confirmed{background:var(--good-soft);border-color:var(--good)}.t65.Confirmed .m{color:var(--good)}
+.t65.Neutral{background:var(--warn-soft);border-color:var(--warn)}.t65.Neutral .m{color:var(--warn)}
+.t65.cp{background:transparent;border-style:dashed;font-size:11px}
+@media(max-width:420px){.t65{padding:6px 3px;min-height:46px}.t65 .n{font-size:14px}.t65 .m{font-size:10px}.g65f{font-size:13px}}
 .hist{display:flex;flex-direction:column;gap:6px;font-size:13px}
 .hist div{display:flex;gap:8px;justify-content:space-between;border-top:1px solid var(--line);padding-top:6px}
 .hist div:first-child{border-top:0;padding-top:0}
@@ -293,6 +301,9 @@ const pct = (a,b) => b ? Math.max(0, Math.min(100, a/b*100)) : 0;
 const ls = { get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch(e){} } };
 const sum = (arr, f) => arr.reduce((s,x) => s + f(x), 0);
 
+/* ---------- 65 St Lawrence apartments (architect's draft plan) ---------- */
+const T65 = { A:900, B:1350, C:1200, D:900 };
+const U65 = []; for(let f = 3; f <= 14; f++) (f === 3 ? ["A","B"] : ["A","B","C","D"]).forEach(t => U65.push({ id: f + t, floor: f, type: t, sqft: T65[t] }));
 /* ---------- schema ---------- */
 const S = {
   banks:{ one:"bank account", sheet:"Banks", fields:[
@@ -407,6 +418,25 @@ const S = {
     {k:"inForecast",l:"Include in cash forecast",t:"select",o:["Yes","No"]},
     {k:"drawdowns",l:"Drawdowns",t:"draws",full:1},
     {k:"note",l:"Notes",t:"area",full:1}]},
+  book65:{ one:"65 St Lawrence booking", sheet:"65 St Lawrence bookings", fields:[
+    {k:"unit",l:"Apartment",t:"select",o:U65.map(u=>u.id),req:1},
+    {k:"status",l:"Status",t:"select",o:["Confirmed","Neutral","Cancelled"],hint:"Neutral: in discussion or on hold, not yet confirmed"},
+    {k:"customer",l:"Customer name",t:"text",req:1,full:1},
+    {k:"contact",l:"Contact number",t:"text"},
+    {k:"email",l:"E-mail",t:"text"},
+    {k:"address",l:"Address",t:"text",full:1},
+    {k:"bookingDate",l:"Booking date",t:"date"},
+    {k:"advance",l:"Advance paid (LKR)",t:"num"},
+    {k:"remark",l:"Remark",t:"area",full:1}]},
+  leads65:{ one:"65 St Lawrence enquiry", sheet:"65 St Lawrence enquiries", fields:[
+    {k:"customer",l:"Name",t:"text",req:1,full:1},
+    {k:"contact",l:"Contact number",t:"text"},
+    {k:"email",l:"E-mail",t:"text"},
+    {k:"address",l:"Address",t:"text",full:1},
+    {k:"preference",l:"Floor / unit wanted",t:"text"},
+    {k:"size",l:"Size wanted",t:"text"},
+    {k:"status",l:"Status",t:"select",o:["New","Following up","Converted","Lost"],full:1},
+    {k:"remark",l:"Remark",t:"area",full:1}]},
   costs:{ one:"cost budget line", sheet:"Cost budget", fields:[
     {k:"project",l:"Project",t:"project",req:1,full:1},
     {k:"head",l:"Cost head",t:"select",o:["Land","Construction","Consultants","Approvals & fees","Admin","Marketing","Finance cost","Other"],full:1},
@@ -419,12 +449,14 @@ const COLS = Object.keys(S);
 const DEF = {
   banks:{asOf:"T", type:"Current"}, cash:{date:"T", direction:"Out"}, tax:{status:"To do"}, pl:{month:"M"}, bs:{date:"T"},
   units:{status:"Available", bookingPct:40, instalments:6, frequency:"Month", pricePerSqft:43000},
-  loans:{rate:12, graceMonths:12, repayMonths:24, status:"Applied", inForecast:"Yes"}, costs:{head:"Construction"}
+  loans:{rate:12, graceMonths:12, repayMonths:24, status:"Applied", inForecast:"Yes"}, costs:{head:"Construction"},
+  book65:{status:"Confirmed", bookingDate:"T"}, leads65:{status:"New"}
 };
 const LABEL = {
   banks:r=>r.name, recv:r=>[r.customer, r.unit && "unit "+r.unit, r.ref].filter(Boolean).join(" · "), pay:r=>[r.supplier, r.ref].filter(Boolean).join(" · "),
   cash:r=>r.description, tax:r=>r.item, pl:r=>fmonth(r.month)+" accounts", bs:r=>"Balance sheet "+fdate(r.date), projects:r=>r.name,
-  units:r=>"Unit "+r.unit+" · "+r.project, loans:r=>r.name, costs:r=>r.project+" · "+r.head
+  units:r=>"Unit "+r.unit+" · "+r.project, loans:r=>r.name, costs:r=>r.project+" · "+r.head,
+  book65:r=>"65 St Lawrence "+r.unit+" · "+(r.customer||""), leads65:r=>"Enquiry · "+(r.customer||"")
 };
 
 /* ---------- state ---------- */
@@ -585,7 +617,7 @@ const TABS = [
 ];
 function fabFor(){
   if(ui.view === "cash") return ["banks","Bank balance"];
-  if(ui.view === "recv") return ui.sSub === "units" ? ["units","Unit"] : ["recv","Instalment"];
+  if(ui.view === "recv") return ui.sSub === "units" ? ["units","Unit"] : ui.sSub === "b65" ? ["book65","Booking"] : ["recv","Instalment"];
   if(ui.view === "pay") return ui.cSub === "budget" ? (ui.proj ? ["costs","Cost line"] : ["projects","Project"]) : ["pay","Supplier bill"];
   if(ui.view === "tax") return ["tax","Deadline"];
   if(ui.view === "reports"){
@@ -1110,9 +1142,61 @@ function viewForecasts(){
 /* ---------- Sales and Costs (grouped tabs) ---------- */
 function subSeg(attr, cur, opts){ return `<div class="seg" role="group" aria-label="Section">${opts.map(([k,l])=>`<button data-${attr}="${k}" aria-pressed="${k===cur}">${l}</button>`).join("")}</div>`; }
 function viewSales(){
-  const sub = ui.sSub === "units" ? "units" : "recv";
-  const seg = subSeg("ssub", sub, [["recv","Customer instalments"],["units","Units"]]);
+  const sub = ["units","b65"].includes(ui.sSub) ? ui.sSub : "recv";
+  const seg = subSeg("ssub", sub, [["recv","Customer instalments"],["units","Units"],["b65","65 St Lawrence bookings"]]);
+  if(sub === "b65") return seg + viewB65();
   return sub === "units" ? `${exampleBanner()}<h2>Units</h2>${seg}${repUnits()}` : seg + viewRecv();
+}
+/* ---------- 65 St Lawrence bookings ---------- */
+const B65C = { Confirmed:"var(--good)", Neutral:"var(--warn)", Cancelled:"var(--bad)" };
+function viewB65(){
+  const bk = D.book65 || [], ld = D.leads65 || [];
+  const active = bk.filter(b => b.status !== "Cancelled"), conf = active.filter(b => b.status === "Confirmed"), neu = active.filter(b => b.status === "Neutral");
+  const byUnit = {}; active.forEach(b => { byUnit[b.unit] = b; });
+  const openLeads = ld.filter(l => l.status === "New" || l.status === "Following up");
+  const adv = sum(bk.filter(b => b.status !== "Cancelled"), b => N(b.advance));
+  const sqftConf = sum(conf, b => (U65.find(u => u.id === b.unit) || {}).sqft || 0);
+  const target = 5, tPct = Math.min(100, conf.length / target * 100);
+  const short = n => { const w = String(n||"").replace(/^(Mrs?|Ms|Dr)\.?\s*/i,"").trim(); return w.length > 14 ? w.slice(0,13) + "…" : w; };
+  const tile = u => { const b = byUnit[u.id], st = b ? b.status : "Available";
+    return `<button class="t65 ${st}" data-u65="${u.id}" aria-label="${u.id}, ${u.sqft} sq.ft, ${st}${b ? ", " + esc(b.customer) : ""}"><span class="n">${u.id}</span><span class="m">${b ? esc(short(b.customer)) : u.sqft + " sq.ft"}</span></button>`; };
+  const floors = []; for(let f = 14; f >= 3; f--) floors.push(f);
+  const grid = `<div class="g65"><div class="g65h"></div>${["A","B","C","D"].map(t => `<div class="g65h">${t}<small>${T65[t].toLocaleString()} sq.ft</small></div>`).join("")}
+    ${floors.map(f => `<div class="g65f">${f}<small>floor</small></div>${["A","B","C","D"].map(t => { const u = U65.find(x => x.id === f + t); return u ? tile(u) : `<div class="t65 cp">${f === 3 && t === "C" ? "Car park" : "—"}</div>`; }).join("")}`).join("")}
+    <div class="g65f">G–2</div><div class="t65 cp" style="grid-column:span 4">Car park floors</div></div>`;
+  const f = ui.bF || "active";
+  const list = (f === "all" ? bk : f === "cancelled" ? bk.filter(b => b.status === "Cancelled") : active).slice().sort((a,b) => (U65.findIndex(u=>u.id===a.unit)) - (U65.findIndex(u=>u.id===b.unit)));
+  return `${exampleBanner()}
+  <section class="hero" style="border-left-color:var(--brass)">
+    <div class="eyebrow">New project · bookings</div>
+    <div class="big" style="font-size:28px">65 St Lawrence Road</div>
+    <div class="meta">46 apartments on floors 3–14 · types A 900, B 1,350, C 1,200 and D 900 sq.ft · car parks on ground to 2nd floor</div>
+  </section>
+  <section class="kpis">
+    <div class="kpi"><div class="eyebrow">Confirmed</div><div class="v" style="color:var(--good)">${conf.length}<span class="note" style="font-size:13px"> / 46</span></div><div class="s">${fm(sqftConf)} sq.ft</div></div>
+    <div class="kpi"><div class="eyebrow">Neutral</div><div class="v" style="color:var(--warn)">${neu.length}</div><div class="s">in discussion / on hold</div></div>
+    <div class="kpi"><div class="eyebrow">Available</div><div class="v">${46 - active.length}</div><div class="s">${bk.filter(b=>b.status==="Cancelled").length} cancelled to date</div></div>
+    <div class="kpi"><div class="eyebrow">Enquiries open</div><div class="v">${openLeads.length}</div><div class="s">${adv ? "LKR " + fm(adv) + " advances" : "no advances recorded"}</div></div>
+  </section>
+  <section class="card stack"><div class="spread"><h3>Pre-sales before project start</h3><span class="note">${conf.length} of ${target} confirmed</span></div>
+    <div class="prog ${conf.length >= target ? "" : "warn"}"><span style="width:${tPct}%"></span></div>
+    <p class="note" style="margin:0">The November 2026 report assumes 5 units pre-booked by January 2027, then 3 a quarter to Q11 and 2 a quarter to Q15.</p></section>
+  <section class="card stack"><div class="spread"><h3>Booking status by floor</h3><div class="chart-legend"><span><i style="background:var(--good)"></i>Confirmed</span><span><i style="background:var(--warn)"></i>Neutral</span><span><i style="background:var(--surface-2);outline:1px solid var(--muted)"></i>Available</span></div></div>
+    <div class="scroll">${grid}</div><p class="note" style="margin:0">${canWrite ? "Tap an apartment to book it or open its booking." : "Tap an apartment to see its booking."}</p></section>
+  <section class="stack"><div class="spread"><h3>Booking register</h3>${canWrite && db ? `<button class="btn small" data-add="book65">Add booking</button>` : ""}</div>
+    ${subSeg("bf", f, [["active","Current"],["cancelled","Cancelled"],["all","All"]])}
+    ${notReady("book65") ? loadingList() : list.length ? `<div class="list">${list.map(b => { const u = U65.find(x => x.id === b.unit) || {};
+      return `<button class="item" data-edit="book65:${esc(b.id)}"><div><div class="t">${esc(b.unit)} · ${esc(b.customer)}</div><div class="d">${esc([u.sqft ? u.sqft + " sq.ft" : "", b.contact, b.bookingDate ? "booked " + fdate(b.bookingDate) : "", b.remark].filter(Boolean).join(" · "))}</div></div>
+      <div class="amt">${chip(b.status, b.status==="Confirmed"?"good":b.status==="Neutral"?"warn":"bad")}<small>${N(b.advance) ? "LKR " + fm(N(b.advance)) : "no advance"}</small></div></button>`; }).join("")}</div>`
+      : `<div class="list"><div class="empty">${f === "cancelled" ? "No cancelled bookings." : "No bookings yet."}</div></div>`}
+  </section>
+  <section class="stack"><div class="spread"><h3>Enquiries</h3>${canWrite && db ? `<button class="btn small" data-add="leads65">Add enquiry</button>` : ""}</div>
+    <p class="note" style="margin:0">Interested buyers not yet booked. Open one to book an apartment for them.</p>
+    ${notReady("leads65") ? loadingList() : ld.length ? `<div class="list">${ld.slice().sort((a,b) => ["New","Following up","Converted","Lost"].indexOf(a.status) - ["New","Following up","Converted","Lost"].indexOf(b.status)).map(l => `
+      <button class="item" data-edit="leads65:${esc(l.id)}"><div><div class="t">${esc(l.customer)}</div><div class="d">${esc([l.contact, l.preference, l.size, l.remark].filter(Boolean).join(" · ")) || "No details yet"}</div></div>
+      <div class="amt">${chip(l.status||"New", l.status==="Converted"?"good":l.status==="Lost"?"bad":l.status==="Following up"?"warn":"acc")}</div></button>`).join("")}</div>`
+      : `<div class="list"><div class="empty">No enquiries yet.</div></div>`}
+  </section>`;
 }
 function viewCosts(){
   const sub = ui.cSub === "budget" ? "budget" : "pay";
@@ -1385,7 +1469,8 @@ function openForm(col, id, preset){
   const rec = id ? D[col].find(x => x.id === id) : null;
   if(id && !rec){ toast("That record was deleted"); return; }
   const sc = S[col]; const v = Object.assign({}, rec || {});
-  if(!rec && preset && (col === "costs" || col === "units")) v.project = preset;
+  if(!rec && preset && (col === "costs" || col === "units") && typeof preset === "string") v.project = preset;
+  if(!rec && preset && typeof preset === "object") Object.assign(v, preset);
   const projects = projNames();
   const settle = rec && ((col==="recv" && outR(rec)>0.5) || (col==="pay" && outP(rec)>0.5) || (col==="tax" && rec.status!=="Paid"));
   const settleLbl = col==="recv" ? "Mark fully received" : col==="pay" ? "Mark fully paid" : "Mark paid today";
@@ -1398,6 +1483,7 @@ function openForm(col, id, preset){
       ${canWrite ? (paidAny ? `<p class="note" style="margin:0">Receipts are already recorded against this schedule, so it can't be replaced. Edit individual instalments in Customers.</p>`
         : `<button type="button" class="btn" data-act="sched">${linked.length ? "Save and replace payment schedule" : "Save and create payment schedule"}</button>`) : ""}</div>`;
   }
+  if(col === "leads65" && rec && canWrite && rec.status !== "Converted") extra = `<div class="sec"><button type="button" class="btn" data-act="lead2book">Book an apartment for ${esc(rec.customer||"this customer")}</button><p class="note" style="margin:0">Opens a booking with their details filled in and marks the enquiry Converted when saved.</p></div>`;
   if(col === "bs" && canWrite) extra = `<div class="sec"><button type="button" class="btn" data-act="bsfill">Fill from app: cash, receivables due, payables, loans</button><p class="note" style="margin:0">Takes bank balances, instalments due by the balance sheet date and still unpaid, open supplier bills, and loan balances at that date. Review before saving.</p></div>`;
   const hist = rec ? `<div class="sec"><h3>History</h3>${Array.isArray(rec.log) && rec.log.length ? `<div class="hist">${rec.log.slice().reverse().map(h=>`<div><span>${esc(h.what)}</span><span class="w">${who(h.by)} · ${fdate(String(h.at).slice(0,10))}</span></div>`).join("")}</div>` : `<p class="note" style="margin:0">No changes recorded since this record was set up.</p>`}</div>` : "";
   $("#sheetroot").innerHTML = `<div class="sheet-bg" id="sheetbg"><form class="sheet" id="sheetform" role="dialog" aria-modal="true" aria-label="${rec?"Edit":"Add"} ${esc(sc.one)}" novalidate>
@@ -1414,7 +1500,7 @@ function openForm(col, id, preset){
     ${extra}${hist}
     ${rec && canWrite ? `<div class="row" id="delrow"><button class="btn danger small" type="button" data-act="del">Delete</button></div>` : ""}
   </form></div>`;
-  sheet = {col, id, rec};
+  sheet = {col, id, rec, lead: (preset && typeof preset === "object" && preset._lead) || null};
   resolveNames();
   setTimeout(()=>{ const first = $("#sheetform input, #sheetform select"); if(first && !rec) first.focus(); }, 30);
 }
@@ -1433,6 +1519,7 @@ function readForm(){
 }
 function showErr(m){ const err = $("#ferr"); if(err){ err.textContent = m; err.hidden = false; } }
 async function save(after){
+  if(!after && sheet && sheet.col === "book65") after = book65After;
   const r = readForm(); if(r.err){ showErr(r.err); return; }
   const prev = sheet.rec, col = sheet.col;
   const keep = {}; if(prev){ ["unitId"].forEach(k => { if(prev[k] !== undefined) keep[k] = prev[k]; }); }
@@ -1449,6 +1536,31 @@ async function save(after){
     if(e && e.code === "invalid_argument"){ canWrite = false; }
   }
 }
+/* booking saved: check the apartment is free, keep the unit register in step, close the enquiry */
+const book65After = {
+  check(b){
+    if(b.status === "Cancelled") return null;
+    const clash = (D.book65||[]).find(x => x.id !== (sheet && sheet.id) && x.unit === b.unit && x.status !== "Cancelled");
+    return clash ? `${b.unit} already has a ${clash.status.toLowerCase()} booking for ${clash.customer}. Cancel that one first.` : null;
+  },
+  async run(b, id){
+    const lead = sheet && sheet.lead;
+    const u = D.units.find(x => x.project === P65 && String(x.unit) === String(b.unit));
+    if(u){
+      const others = (D.book65||[]).filter(x => x.id !== id && x.unit === b.unit && x.status !== "Cancelled");
+      const act = b.status !== "Cancelled" ? b : others[0];
+      const st = act ? (act.status === "Confirmed" ? "Booked" : "Reserved") : "Available";
+      const cust = act ? act.customer : "";
+      if(u.status !== st || (u.customer||"") !== cust){
+        const nu = stamp(u, Object.assign({}, u, { status: st, customer: cust, bookingDate: act ? (act.bookingDate||"") : "" }), `status ${u.status||"Available"} → ${st} (booking ${b.unit})`); delete nu.id;
+        if(u.status === "Sold" && st !== "Available") nu.status = "Sold";
+        await db.collection("units").doc(u.id).set(nu);
+      }
+    }
+    if(lead){ const l = (D.leads65||[]).find(x => x.id === lead); if(l && l.status !== "Converted"){ const nl = stamp(l, Object.assign({}, l, { status:"Converted" }), `converted: booked ${b.unit}`); delete nl.id; await db.collection("leads65").doc(l.id).set(nl); } }
+    book65After.msg = `Booking saved · ${b.unit} ${b.status === "Cancelled" ? "released" : b.status === "Confirmed" ? "confirmed" : "held"}`;
+  }
+};
 const schedAfter = {
   check(u){
     if(!isSold(u)) return "Set the status to Booked or Sold first.";
@@ -1587,7 +1699,7 @@ async function doExport(){
     const X = await loadXLSX(); const wb = X.utils.book_new();
     const add = (name, aoa) => { const ws = X.utils.aoa_to_sheet(aoa); ws["!cols"] = aoa[0].map(()=>({wch:18})); X.utils.book_append_sheet(wb, ws, name.slice(0,31)); };
     add("Summary", [["Nexus Property Developers (Pvt) Ltd"],["Exported", T],[],["Cash at bank", cashAtBank()],["Receivable outstanding", sum(recvOpen(),outR)],["Payable outstanding", sum(payOpen(),outP)]]);
-    ["banks","recv","pay","cash","tax","pl","bs","projects","units","costs"].forEach(c => add(S[c].sheet, sheetRows(c)));
+    ["banks","recv","pay","cash","tax","pl","bs","projects","units","costs","book65","leads65"].forEach(c => add(S[c].sheet, sheetRows(c)));
     add("Loans", [["Loan","Bank","Project","Facility","Rate %","Grace months","Repay months","Status","Drawn","Outstanding today"]].concat(D.loans.map(l=>[l.name,l.bank||"",l.project||"",N(l.facility),N(l.rate),N(l.graceMonths),N(l.repayMonths),l.status||"",loanSched(l).drawn,loanOutstanding(l)])));
     const ls_ = [["Loan","Due date","Interest","Principal","Payment","Balance after"]]; D.loans.forEach(l => loanSched(l).rows.forEach(r => ls_.push([l.name, r.date, Math.round(r.interest), Math.round(r.principal), Math.round(r.payment), Math.round(r.bal)])));
     add("Loan schedules", ls_);
@@ -1625,6 +1737,8 @@ document.addEventListener("click", e => {
   if(d.fy){ ui.fy = d.fy; render(); return; }
   if(d.proj){ ui.proj = d.proj; render(); window.scrollTo(0,0); return; }
   if(d.units){ ui.view = "recv"; ui.sSub = "units"; ui.uProj = d.units; ui.proj = null; ls.set("nx-view","recv"); render(); window.scrollTo(0,0); return; }
+  if(d.u65){ if(!db){ toast("Data isn't connected in this view"); return; } const b = (D.book65||[]).find(x => x.unit === d.u65 && x.status !== "Cancelled"); if(b) openForm("book65", b.id); else if(canWrite) openForm("book65", null, { unit: d.u65 }); else toast(d.u65 + " is available"); return; }
+  if(d.bf){ ui.bF = d.bf; render(); return; }
   if(d.ssub){ ui.sSub = d.ssub; ui.proj = null; render(); window.scrollTo(0,0); return; }
   if(d.csub){ ui.cSub = d.csub; ui.proj = null; render(); window.scrollTo(0,0); return; }
   if(d.cm){ ui.cm = d.cm === "-" ? null : d.cm; render(); window.scrollTo(0,0); return; }
@@ -1643,6 +1757,8 @@ document.addEventListener("click", e => {
       if(sheet.col === "tax"){ f.elements.status.value = "Paid"; if(!f.elements.doneDate.value) f.elements.doneDate.value = T; }
       save(); return; }
     case "sched": schedAfter.msg = null; save(schedAfter).catch(()=>{}); return;
+    case "lead2book": { const l = sheet && sheet.rec; if(!l) return; const pre = { customer:l.customer||"", contact:l.contact||"", email:l.email||"", address:l.address||"", remark:[l.preference && "Wanted: "+l.preference, l.size, l.remark].filter(Boolean).join(" · "), _lead:l.id };
+      closeSheet(); openForm("book65", null, pre); return; }
     case "bsfill": bsFill(); return;
     case "adddraw": $("#draws").insertAdjacentHTML("beforeend", drawRow(null)); return;
     case "rmdraw": t.closest(".drow").remove(); return;
