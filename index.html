@@ -219,6 +219,14 @@ td.neg,.neg{color:var(--bad)}
 .t65.Confirmed{background:var(--good-soft);border-color:var(--good)}.t65.Confirmed .m{color:var(--good)}
 .t65.Neutral{background:var(--warn-soft);border-color:var(--warn)}.t65.Neutral .m{color:var(--warn)}
 .t65.cp{background:transparent;border-style:dashed;font-size:11px}
+.scanpgs{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:8px}
+.scanpg{position:relative;aspect-ratio:3/4;border-radius:8px;overflow:hidden;border:1px solid var(--line);background:var(--surface-2);display:grid;place-items:center;font-size:12px;color:var(--muted)}
+.scanpg img{width:100%;height:100%;object-fit:cover;display:block}
+.scanpg .x{position:absolute;top:4px;right:4px;width:26px;height:26px;border-radius:50%;border:0;background:rgba(0,0,0,.65);color:#fff;font-size:15px;line-height:26px;padding:0;cursor:pointer}
+.scanpg .pn{position:absolute;left:4px;bottom:4px;background:rgba(0,0,0,.65);color:#fff;border-radius:6px;padding:1px 6px;font-size:11px}
+.scanbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}.scanbtns .btn{display:flex;gap:8px;align-items:center;justify-content:center}
+.scanbtns svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.scanf{display:grid;gap:8px}.scanf select,.scanf input{width:100%;box-sizing:border-box;border:1px solid var(--line);background:var(--surface-2);border-radius:10px;padding:10px 11px;font-size:16px;min-width:0}
 @media(max-width:420px){.t65{padding:6px 3px;min-height:46px}.t65 .n{font-size:14px}.t65 .m{font-size:10px}.g65f{font-size:13px}}
 .hist{display:flex;flex-direction:column;gap:6px;font-size:13px}
 .hist div{display:flex;gap:8px;justify-content:space-between;border-top:1px solid var(--line);padding-top:6px}
@@ -579,6 +587,86 @@ function syncCard(){
     ${importState.msg ? `<p class="note" style="margin:0;${importState.err?"color:var(--bad)":""}">${esc(importState.msg)}</p>` : `<p class="note" style="margin:0">New files are checked every hour from about 9 am to 9 pm Sri Lanka time.</p>`}
   </section>`;
 }
+/* ---------- scan a document with the phone camera: photos are stored as assets and listed in "scans"; the Drive import reads them ---------- */
+const SCAN_KINDS = [["bank","Bank statement"],["recv","Customer receipt or payment schedule"],["pay","Supplier bill or payment"],["mgmt","Management accounts or cash flow"],["tax","Tax payment or return"],["other","Other – let the import work it out"]];
+const scanKindL = k => (SCAN_KINDS.find(x => x[0] === k) || [k, "Document"])[1];
+let SCANS = [], scansLoaded = false;
+const scanUI = { kind:"bank", note:"", pages:[], busy:false, msg:"", err:false };
+async function shrinkImage(file){
+  if(!/^image\//.test(file.type) || file.type === "image/svg+xml") return file;
+  try{
+    const bmp = await createImageBitmap(file, { imageOrientation:"from-image" });
+    const k = Math.min(1, 2400 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement("canvas"); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+    const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.drawImage(bmp, 0, 0, c.width, c.height);
+    const b = await new Promise(r => c.toBlob(r, "image/jpeg", 0.86));
+    return b && b.size < file.size ? b : file;
+  }catch(e){ return file; }
+}
+async function scanAdd(files){
+  const list = [...(files || [])]; if(!list.length) return;
+  scanUI.msg = ""; scanUI.err = false;
+  for(const f of list){
+    if(!/^image\//.test(f.type) && f.type !== "application/pdf"){ scanUI.err = true; scanUI.msg = f.name + " isn't a photo or PDF."; continue; }
+    const blob = await shrinkImage(f);
+    if(blob.size > 19.5 * 1024 * 1024){ scanUI.err = true; scanUI.msg = f.name + " is over 20 MB. Take the photo again at a lower resolution."; continue; }
+    scanUI.pages.push({ blob, type: blob.type || f.type, name: f.name || "photo.jpg", url: /^image\//.test(blob.type || f.type) ? URL.createObjectURL(blob) : "" });
+  }
+  render();
+}
+function scanClear(){ scanUI.pages.forEach(p => p.url && URL.revokeObjectURL(p.url)); scanUI.pages = []; scanUI.note = ""; }
+async function scanSave(){
+  if(scanUI.busy || !scanUI.pages.length || !assetsNS || !db) return;
+  scanUI.busy = true; scanUI.msg = ""; scanUI.err = false; render();
+  const up = [];
+  try{
+    for(const p of scanUI.pages){
+      const r = await assetsNS.upload(p.blob, { type: p.type });
+      up.push({ id: r.id, type: r.contentType, size: r.sizeBytes });
+    }
+    const now = new Date().toISOString(), id = "s" + now.slice(0,10).replace(/-/g,"") + "-" + Math.random().toString(36).slice(2,7);
+    await db.collection("scans").doc(id).set({ kind: scanUI.kind, kindLabel: scanKindL(scanUI.kind), note: scanUI.note.trim(), pages: up, takenAt: now, by: uid || null, status: "New", example: false });
+    const n = scanUI.pages.length; scanClear();
+    scanUI.msg = `Saved ${n} page${n>1?"s":""}. ${isOwnerView && mcpNS ? "Tap Import now to read it straight away, or it's picked up at the next import." : "It will be read at the next import."}`;
+  }catch(e){
+    up.forEach(u => { assetsNS.delete(u.id).catch(()=>{}); });
+    const c = e && e.code; scanUI.err = true;
+    scanUI.msg = c === "unsupported_type" ? "That file type can't be saved. Use a photo (JPG/PNG) or a PDF."
+      : c === "quota_or_state" ? "The app's file storage is full. Ask Claude to clear old scans, then try again."
+      : c === "not_granted" ? "Saving files wasn't allowed. Tap Save again and choose Allow."
+      : c === "store_unavailable" ? "File storage didn't answer. Wait a moment and tap Save again."
+      : "The photos couldn't be saved. Check your connection and try again.";
+  }
+  scanUI.busy = false; render();
+}
+const CAM_I = '<path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="14" r="3.5"/>';
+const FILE_I = '<path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5"/><path d="M12 17v-6M9 14l3-3 3 3"/>';
+function scanCard(){
+  if(!assetsNS || !canWrite || !db) return "";
+  const waiting = SCANS.filter(x => x.status === "New").sort((a,b) => String(b.takenAt).localeCompare(String(a.takenAt)));
+  const recent = SCANS.filter(x => x.status !== "New").sort((a,b) => String(b.importedAt||b.takenAt).localeCompare(String(a.importedAt||a.takenAt))).slice(0,3);
+  const P = scanUI.pages;
+  const row = x => { const pg = Array.isArray(x.pages) ? x.pages : [], first = pg.find(q => /^image\//.test(q.type||""));
+    return `<div class="item" style="cursor:default"><div style="display:flex;gap:10px;align-items:center;min-width:0">${first ? `<img src="/_blob/${esc(first.id)}" alt="" style="width:38px;height:50px;object-fit:cover;border-radius:6px;border:1px solid var(--line);flex:none">` : ""}<div style="min-width:0"><div class="t">${esc(x.kindLabel || scanKindL(x.kind))}</div><div class="d">${esc([pg.length + " page" + (pg.length!==1?"s":""), fdate(String(x.takenAt).slice(0,10)), x.note, x.result].filter(Boolean).join(" · "))}</div></div></div>
+      <div class="amt">${x.status === "New" ? chip("Waiting","warn") : x.status === "Imported" ? chip("Imported","good") : chip(x.status || "Checked", "bad")}</div></div>`; };
+  return `<section class="card stack" id="scancard">
+    <div class="spread"><h3>Scan a document</h3>${waiting.length ? chip(waiting.length + " waiting","warn") : ""}</div>
+    <p class="note" style="margin:0">Photograph a bank statement, receipt, bill or tax payment. It's read and posted at the next import, the same as a file in the Drive folder.</p>
+    <div class="scanf">
+      <select id="scankind" aria-label="What is it?">${SCAN_KINDS.map(([k,l]) => `<option value="${k}" ${k===scanUI.kind?"selected":""}>${l}</option>`).join("")}</select>
+      ${P.length ? `<input id="scannote" type="text" maxlength="200" placeholder="Note for the import (optional), e.g. account or customer" value="${esc(scanUI.note)}">` : ""}
+    </div>
+    ${P.length ? `<div class="scanpgs">${P.map((p,i) => `<div class="scanpg">${p.url ? `<img src="${p.url}" alt="Page ${i+1}">` : `<span>PDF</span>`}<span class="pn">${i+1}</span><button type="button" class="x" data-act="scanrm" data-i="${i}" aria-label="Remove page ${i+1}">×</button></div>`).join("")}</div>` : ""}
+    <div class="scanbtns">
+      <button type="button" class="btn ${P.length ? "" : "primary"}" data-act="scancam" ${scanUI.busy?"disabled":""}><svg viewBox="0 0 24 24">${CAM_I}</svg>${P.length ? "Add page" : "Take photo"}</button>
+      <button type="button" class="btn" data-act="scanpick" ${scanUI.busy?"disabled":""}><svg viewBox="0 0 24 24">${FILE_I}</svg>Choose file</button>
+    </div>
+    ${P.length ? `<div class="row"><button type="button" class="btn primary" data-act="scansave" ${scanUI.busy?"disabled":""}>${scanUI.busy ? "Saving…" : `Save ${P.length} page${P.length>1?"s":""} for import`}</button><button type="button" class="btn small" data-act="scancancel" ${scanUI.busy?"disabled":""}>Discard</button></div>` : ""}
+    ${scanUI.msg ? `<p class="note" style="margin:0;${scanUI.err?"color:var(--bad)":""}">${esc(scanUI.msg)}</p>` : ""}
+    ${waiting.length && isOwnerView && mcpNS && !P.length ? `<div class="row"><button class="btn small primary" type="button" data-act="importnow" ${importState.busy?"disabled":""}>${importState.busy ? "Starting…" : "Import now"}</button>${importState.msg ? `<span class="note" style="${importState.err?"color:var(--bad)":""}">${esc(importState.msg)}</span>` : ""}</div>` : ""}
+    ${waiting.length || recent.length ? `<div class="list">${waiting.concat(recent).map(row).join("")}</div>` : ""}
+  </section>`;
+}
 const IMPORT_TASK = "trig_018DzKm9QhoSPsCyKHsUT3Qz";
 let mcpNS = null, isOwnerView = false;
 const importState = { busy:false, msg:"", err:false };
@@ -677,6 +765,7 @@ function viewHome(){
     <div class="kpi"><div class="eyebrow">Net working cash</div><div class="v">${fmM(cab + rTot - pTot)}</div><div class="s">Cash + receivable − payable</div></div>
     <button class="kpi" data-go="tax"><div class="eyebrow">Tax due ≤30d</div><div class="v">${t30.length}</div><div class="s">${fmM(sum(t30,t=>N(t.amount)))} where amounts known</div></button>
   </section>
+  ${scanCard()}
   <section class="stack">
     <h3>Needs attention</h3>
     <div class="alerts">${A.length ? A.map(a => `<button class="alert ${a[0]}" data-go="${a[3]}" ${a[4]?`data-f="${a[4]}"`:""}><span class="bar"></span><span><span class="t">${esc(a[1])}</span><span class="d">${esc(a[2])}</span></span></button>`).join("") : `<div class="card note">${COLS.every(c=>loaded[c]) ? "Add bank balances, customer instalments and supplier bills to see alerts here." : "Loading…"}</div>`}</div>
@@ -1770,6 +1859,11 @@ document.addEventListener("click", e => {
     case "exno": render(); return;
     case "data": openData(); return;
     case "importnow": importNow(); return;
+    case "scancam": $("#scan-cam").click(); return;
+    case "scanpick": $("#scan-pick").click(); return;
+    case "scanrm": { const i = +t.dataset.i, p = scanUI.pages[i]; if(p && p.url) URL.revokeObjectURL(p.url); scanUI.pages.splice(i,1); render(); return; }
+    case "scancancel": scanClear(); scanUI.msg = ""; render(); return;
+    case "scansave": scanSave(); return;
     case "closemonth": closeMonth(t.dataset.m); return;
     case "reopen": reopenMonth(t.dataset.m); return;
     case "qadd": addQuery(t.dataset.m); return;
@@ -1781,11 +1875,13 @@ document.addEventListener("click", e => {
   }
 });
 document.addEventListener("change", e => {
+  if(e.target.id === "scan-cam" || e.target.id === "scan-pick"){ const fs = [...e.target.files]; e.target.value = ""; scanAdd(fs); return; }
+  if(e.target.id === "scankind"){ scanUI.kind = e.target.value; return; }
   if(e.target.id === "imp-file" && e.target.files[0]){ handleFile(e.target.files[0]); e.target.value = ""; }
   if(e.target.id === "imp-col"){ imp = null; const o = $("#imp-out"); if(o) o.innerHTML = ""; }
   if(sheet && sheet.col === "units" && e.target.closest("#sheetform")) previewSchedule();
 });
-document.addEventListener("input", e => { if(sheet && sheet.col === "units" && e.target.closest("#sheetform")){ clearTimeout(previewSchedule.t); previewSchedule.t = setTimeout(previewSchedule, 250); } });
+document.addEventListener("input", e => { if(e.target.id === "scannote"){ scanUI.note = e.target.value; return; } if(sheet && sheet.col === "units" && e.target.closest("#sheetform")){ clearTimeout(previewSchedule.t); previewSchedule.t = setTimeout(previewSchedule, 250); } });
 document.addEventListener("submit", e => { if(e.target.id === "sheetform"){ e.preventDefault(); save(); } });
 document.addEventListener("keydown", e => { if(e.key === "Escape" && sheet) closeSheet(); });
 const _schedRun = schedAfter.run;
@@ -1855,6 +1951,7 @@ function queueSnapshot(){
   }, wait);
 }
 function setSync(state, txt){ connState = state; $("#syncdot").className = "dot " + (state==="on"?"on":state==="error"||state==="offline"?"err":""); $("#synctxt").textContent = txt; }
+document.body.insertAdjacentHTML("beforeend", `<input type="file" id="scan-cam" accept="image/*" capture="environment" hidden><input type="file" id="scan-pick" accept="image/*,application/pdf" multiple hidden>`);
 render();
 (async () => {
   if(!window.claude || typeof window.claude.use !== "function"){ setSync("offline","Offline"); render(); return; }
@@ -1866,6 +1963,7 @@ render();
   if(canWrite){ try{ assetsNS = await window.claude.use("assets"); }catch(e){ assetsNS = null; } }
   try{ canAdmin = userNS ? !!(await userNS.canEdit()) : false; }catch(e){ canAdmin = false; }
   db.collection("periods").onSnapshot(snap => { D.periods = snap.docs.map(d => Object.assign({id:d.id}, d.data())); loadedPeriods = true; if(!sheet) render(); queueSnapshot(); }, () => { loadedPeriods = true; });
+  if(assetsNS && canWrite) db.collection("scans").onSnapshot(snap => { SCANS = snap.docs.map(d => Object.assign({id:d.id}, d.data())); scansLoaded = true; if(!sheet && ui.view === "home") render(); }, () => { scansLoaded = true; });
   if(assetsNS) db.doc("sync/snapshot").onSnapshot(snap => { SNAPPTR = snap.exists ? snap.data() : null; }, () => {});
   setSync("on", canWrite ? "Live" : "Live · view only");
   db.doc("sync/latest").onSnapshot(snap => { SYNC = snap.exists ? snap.data() : null; if(!sheet && ui.view === "home") render(); }, () => {});
