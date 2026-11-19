@@ -921,9 +921,9 @@ const qName = m => { const q = QTR(m); return `${MON[+q[0].slice(5)-1]}–${MON[
 const dmyIso = s => { const x = String(s||"").trim().match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4})$/); if(!x) return ""; return `${x[3]}-${x[2].padStart(2,"0")}-${x[1].padStart(2,"0")}`; };
 function vatTotals(v){
   const o = (v && v.out) || [], i = (v && v.in) || [];
-  const t = { gross:0, land:0, value:0, sscl:0, vat:0, iv:0, ivat:0, ig:0 };
+  const t = { gross:0, land:0, value:0, sscl:0, vat:0, iv:0, ivat:0, ig:0, hv:0, hvat:0 };
   o.forEach(l => { t.gross += N(l.gross); t.land += N(l.land); t.value += N(l.value); t.sscl += N(l.sscl); t.vat += N(l.vat); });
-  i.forEach(l => { t.iv += N(l.value); t.ivat += N(l.vat); t.ig += N(l.gross); });
+  i.forEach(l => { t.iv += N(l.value); t.ivat += N(l.vat); t.ig += N(l.gross); if(l.imp){ t.hv += N(l.value); t.hvat += N(l.vat); } });
   t.bf = N(v && v.bf); t.net = t.vat - t.ivat - t.bf;
   Object.keys(t).forEach(k => t[k] = r2(t[k])); return t;
 }
@@ -991,6 +991,7 @@ function vatChecks(m, v){
     if(l.d && Math.abs(ly - y) > 1) bad.push(`dated ${fdate(l.d)} – year looks wrong`);
     else if(l.d && l.d.slice(0,7) < m) C.push(["info", `Input line ${n} · ${l.s} is dated ${fdate(l.d)}`, `An earlier month's invoice: make sure it wasn't claimed in ${mName(l.d.slice(0,7))}.`]);
     else if(l.d && l.d.slice(0,7) > m) bad.push(`dated ${fdate(l.d)}, after ${mName(m)}`);
+    if(l.imp) C.push(["info", `Input line ${n} · ${l.s} is an import (${l.ref||"no CusDec no."})`, `VAT ${fm2(N(l.vat))} paid to Customs goes in return boxes H and 5. Keep the CusDec and the Customs payment receipt on file.`]);
     if(/^\d{2}0CT_/.test(l.ref||"")) bad.push(`reference "${l.ref}" has a zero instead of the letter O`);
     const k = (l.s+"|"+l.ref).toLowerCase(); if(refs[k]) bad.push(`same invoice as line ${refs[k]}`); refs[k] = n;
     if(bad.length) C.push(["bad", `Input line ${n} · ${l.s}`, bad.join("; ")]); });
@@ -1011,7 +1012,7 @@ function parseVatPaste(kind, text){
     } else {
       if(rest.length < 4){ skipped.push(line.trim().slice(0,60)); return; }
       const nums = rest.slice(1,4).map(N);
-      rows.push({ d, s: rest[0], value: nums[0], vat: nums[1], gross: nums[2], ref: rest[4] || "" });
+      rows.push(Object.assign({ d, s: rest[0], value: nums[0], vat: nums[1], gross: nums[2], ref: rest[4] || "" }, /^\d{4,}$/.test(rest[4] || "") ? { imp: true } : {}));
     }
   });
   return { rows, skipped };
@@ -1042,6 +1043,7 @@ async function vatPasteApply(mode){
     render();
   }
 }
+async function vatToggleImp(i){ const m = ui.vatM, v = vatDoc(m); if(!v) return; const rows = (v.in||[]).map(x => Object.assign({}, x)); const x = rows[i]; if(!x) return; if(x.imp) delete x.imp; else x.imp = true; await vatSave(m, { in: rows }, `${x.s} ${x.ref||""} marked as ${x.imp ? "import" : "local purchase"}`); }
 async function vatRemove(kind, i){ const m = ui.vatM, v = vatDoc(m); if(!v) return; const rows = (v[kind]||[]).slice(); const [x] = rows.splice(i,1); await vatSave(m, { [kind]: rows }, `Removed ${kind === "out" ? "output" : "input"} line: ${x ? (x.c || x.s) + " " + fm2(N(x.gross || x.value)) : ""}`); }
 async function vatAddReceipt(idx){
   const m = ui.vatM, x = (ui._vatMissing || [])[idx]; if(!x) return;
@@ -1069,7 +1071,7 @@ async function vatExport(){
     const add = (name, aoa, w) => { const ws = X.utils.aoa_to_sheet(aoa); ws["!cols"] = aoa[0].map((_,i) => ({ wch: (w && w[i]) || 16 })); X.utils.book_append_sheet(wb, ws, name); };
     add("Summary", [[`VAT calculation – ${mName(m)}`,""],["Nexus Property Developers (Pvt) Ltd · TIN 114446548",""],[],["Output VAT on cash received from customers", t.vat],["Less input VAT paid to suppliers", t.ivat],["Less input VAT brought forward", t.bf],["Net VAT payable", t.net],[],["SSCL payable (2.5% of value of supply)", t.sscl],[],["Value of supply (box A)", t.value],["Land value excluded", t.land],["Cash received from customers", t.gross],["Local purchases (box I)", t.iv]], [46,18]);
     add("Output", [["#","Date","Customer","Receipt","Project","Unit","Value of supply","SSCL 2.5%","VAT 18%","Land","Received"]].concat((v.out||[]).map((l,i) => [i+1, l.d, l.c, l.ref, l.proj||"", l.unit||"", N(l.value), N(l.sscl), N(l.vat), N(l.land), N(l.gross)])).concat([["","","Total","","","",t.value,t.sscl,t.vat,t.land,t.gross]]), [4,11,32,14,14,6,16,13,14,14,16]);
-    add("Input", [["#","Date","Supplier","Value","VAT 18%","Total","Invoice ref"]].concat((v.in||[]).map((l,i) => [i+1, l.d, l.s, N(l.value), N(l.vat), N(l.gross), l.ref])).concat([["","","Total",t.iv,t.ivat,t.ig,""]]), [4,11,40,14,13,14,30]);
+    add("Input", [["#","Date","Supplier","Value","VAT 18%","Total","Invoice ref","Type"]].concat((v.in||[]).map((l,i) => [i+1, l.d, l.s, N(l.value), N(l.vat), N(l.gross), l.ref, l.imp ? "Import" : "Local"])).concat([["","","Total",t.iv,t.ivat,t.ig,""]]), [4,11,40,14,13,14,30]);
     await dl.save({ filename:`VAT workings ${mName(m)}.xlsx`, data: new Uint8Array(X.write(wb, { bookType:"xlsx", type:"array" })) });
   }catch(e){ if(!(e && e.code === "declined")) toast("Couldn't prepare the file."); }
 }
@@ -1090,7 +1092,7 @@ function viewVat(){
   const ret = D.tax.find(x => x.taxType === "VAT" && /return/i.test(x.item||"") && x.period === MON[+q[2].slice(5)-1] + " " + q[2].slice(0,4));
   const box16 = Math.max(0, qs("vat") - qs("ivat") - N((vatDoc(q[0])||{}).bf));
   const lineO = (l,i) => `<tr><td>${i+1}. ${esc(l.c)}<div class="note">${esc([fdate(l.d), l.ref, [l.proj, l.unit].filter(Boolean).join(" ")].filter(Boolean).join(" · "))}${N(l.gross) ? ` · land ${(N(l.land)/N(l.gross)*100).toFixed(3)}%` : ""}</div></td><td>${fm2(N(l.gross))}</td><td>${fm2(N(l.land))}</td><td>${fm2(N(l.value))}</td><td>${fm2(N(l.sscl))}</td><td>${fm2(N(l.vat))}</td>${can ? `<td><button class="btn small" type="button" data-act="vatrm" data-k="out" data-i="${i}" aria-label="Remove line ${i+1}">×</button></td>` : ""}</tr>`;
-  const lineI = (l,i) => `<tr><td>${i+1}. ${esc(l.s)}<div class="note">${esc([fdate(l.d), l.ref].filter(Boolean).join(" · "))}</div></td><td>${fm2(N(l.value))}</td><td>${fm2(N(l.vat))}</td><td>${fm2(N(l.gross))}</td>${can ? `<td><button class="btn small" type="button" data-act="vatrm" data-k="in" data-i="${i}" aria-label="Remove line ${i+1}">×</button></td>` : ""}</tr>`;
+  const lineI = (l,i) => `<tr><td>${i+1}. ${esc(l.s)}<div class="note">${esc([fdate(l.d), l.ref].filter(Boolean).join(" · "))}</div>${can ? `<button class="btn small" type="button" data-act="vatimp" data-i="${i}" style="margin-top:4px;padding:2px 8px;font-size:11px">${l.imp ? "Import · change to local" : "Local · mark as import"}</button>` : l.imp ? chip("Import") : ""}</td><td>${fm2(N(l.value))}</td><td>${fm2(N(l.vat))}</td><td>${fm2(N(l.gross))}</td>${can ? `<td><button class="btn small" type="button" data-act="vatrm" data-k="in" data-i="${i}" aria-label="Remove line ${i+1}">×</button></td>` : ""}</tr>`;
   const ico = { bad:"var(--bad)", warn:"var(--warn)", info:"var(--muted)" };
   let mi = 0;
   return `
@@ -1104,7 +1106,7 @@ function viewVat(){
     <div class="stmt one">
       <div class="hd"><span>VAT calculation</span><span>LKR</span></div>
       <div><span>Output VAT on cash received from customers (${o.length} lines)</span><span>${fm2(t.vat)}</span></div>
-      <div><span>Less input VAT paid to suppliers (${inl.length} invoices)</span><span>(${fm2(t.ivat)})</span></div>
+      <div><span>Less input VAT paid to suppliers (${inl.length} invoices${t.hvat ? `, incl. ${fm2(t.hvat)} on imports` : ""})</span><span>(${fm2(t.ivat)})</span></div>
       ${t.bf ? `<div><span>Less excess input brought forward</span><span>(${fm2(t.bf)})</span></div>` : ""}
       <div class="sum"><span>Net VAT payable<div style="margin-top:4px;font-weight:400">${agree(vi, Math.max(0,t.net))}</div></span><span>${fm2(Math.max(0,t.net))}</span></div>
       <div class="sum"><span>SSCL payable (2.5% of value of supply)<div style="margin-top:4px;font-weight:400">${agree(si, t.sscl)}</div></span><span>${fm2(t.sscl)}</span></div>
@@ -1114,7 +1116,8 @@ function viewVat(){
       <div class="ind"><span>Less land value excluded</span><span>(${fm2(t.land)})</span></div>
       <div class="ind"><span>Less SSCL and VAT included</span><span>(${fm2(r2(t.gross - t.land - t.value))})</span></div>
       <div class="ind"><span>Value of supply (return box A)</span><span>${fm2(t.value)}</span></div>
-      <div class="ind"><span>Local purchases, net of VAT (box I)</span><span>${fm2(t.iv)}</span></div>
+      <div class="ind"><span>Local purchases, net of VAT (box I)</span><span>${fm2(r2(t.iv - t.hv))}</span></div>
+      ${t.hv ? `<div class="ind"><span>Imports, net of VAT (box H)</span><span>${fm2(t.hv)}</span></div>` : ""}
     </div>
     <div class="row">${can && ((vi && vi.status !== "Paid" && Math.abs(N(vi.amount)-Math.max(0,t.net)) >= 1) || (si && si.status !== "Paid" && Math.abs(N(si.amount)-t.sscl) >= 1)) ? `<button class="btn small primary" data-act="vattax">Put these amounts in the tax list</button>` : ""}${dl ? `<button class="btn small" data-act="vatxl">Download Excel workings</button>` : ""}</div>
   </section>` : ""}
@@ -1139,8 +1142,10 @@ function viewVat(){
       <div class="hd"><span>RAMIS box</span><span>Workings</span></div>
       <div><span>A · Taxable supplies</span><span>${fm2(qs("value"))}</span></div>
       <div><span>0 · Output tax</span><span>${fm2(qs("vat"))}</span></div>
-      <div><span>I · Local purchases</span><span>${fm2(qs("iv"))}</span></div>
-      <div><span>6 / 9 · Input tax</span><span>${fm2(qs("ivat"))}</span></div>
+      ${qs("hv") ? `<div><span>H · Imports</span><span>${fm2(qs("hv"))}</span></div><div><span>5 · Upfront tax on imports</span><span>${fm2(qs("hvat"))}</span></div>` : ""}
+      <div><span>I · Local purchases</span><span>${fm2(r2(qs("iv") - qs("hv")))}</span></div>
+      <div><span>6 · Tax on local purchases</span><span>${fm2(r2(qs("ivat") - qs("hvat")))}</span></div>
+      <div><span>7 / 9 · Allowable input tax</span><span>${fm2(qs("ivat"))}</span></div>
       <div class="sum"><span>16 · Tax payable${ret && N(ret.amount) ? `<div class="note" style="font-weight:400">Filed return: ${fm(N(ret.amount))}</div>` : ""}</span><span>${fm2(box16)}</span></div>
       <div><span>Q · Monthly payments made</span><span>(${fm2(paid)})</span></div>
       <div class="sum"><span>18 · Balance payable with the return</span><span>${fm2(r2(box16 - paid))}</span></div>
@@ -2110,6 +2115,7 @@ document.addEventListener("click", e => {
     case "vatpreplace": { const v = vatDoc(ui.vatM), k = ui.vatPaste.kind; if(v && (v[k]||[]).length && !t.dataset.sure){ t.dataset.sure = "1"; t.textContent = "Tap again to replace " + (v[k]||[]).length + " lines"; return; } vatPasteApply("replace"); return; }
     case "vatpadd": vatPasteApply("add"); return;
     case "vatrm": vatRemove(t.dataset.k, +t.dataset.i); return;
+    case "vatimp": vatToggleImp(+t.dataset.i); return;
     case "vatadd": vatAddReceipt(+t.dataset.i); return;
     case "vattax": vatPushToTax(); return;
     case "vatxl": vatExport(); return;
