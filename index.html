@@ -589,7 +589,7 @@ function syncCard(){
   </section>`;
 }
 /* ---------- scan a document with the phone camera: photos are stored as assets and listed in "scans"; the Drive import reads them ---------- */
-const SCAN_KINDS = [["bank","Bank statement"],["recv","Customer receipt or payment schedule"],["pay","Supplier bill or payment"],["mgmt","Management accounts or cash flow"],["tax","Tax payment or return"],["other","Other – let the import work it out"]];
+const SCAN_KINDS = [["vatin","Input VAT invoice (supplier tax invoice or CusDec)"],["bank","Bank statement"],["recv","Customer receipt or payment schedule"],["pay","Supplier bill or payment"],["mgmt","Management accounts or cash flow"],["tax","Tax payment or return"],["other","Other – let the import work it out"]];
 const scanKindL = k => (SCAN_KINDS.find(x => x[0] === k) || [k, "Document"])[1];
 let SCANS = [], scansLoaded = false;
 const scanUI = { kind:"bank", note:"", pages:[], busy:false, msg:"", err:false };
@@ -626,7 +626,7 @@ async function scanSave(){
       up.push({ id: r.id, type: r.contentType, size: r.sizeBytes });
     }
     const now = new Date().toISOString(), id = "s" + now.slice(0,10).replace(/-/g,"") + "-" + Math.random().toString(36).slice(2,7);
-    await db.collection("scans").doc(id).set({ kind: scanUI.kind, kindLabel: scanKindL(scanUI.kind), note: scanUI.note.trim(), pages: up, takenAt: now, by: uid || null, status: "New", example: false });
+    await db.collection("scans").doc(id).set({ kind: scanUI.kind, kindLabel: scanKindL(scanUI.kind), note: scanUI.note.trim(), vatMonth: scanUI.kind === "vatin" ? scanVatMonth() : "", pages: up, takenAt: now, by: uid || null, status: "New", example: false });
     const n = scanUI.pages.length; scanClear();
     scanUI.msg = `Saved ${n} page${n>1?"s":""}. ${isOwnerView && mcpNS ? "Tap Import now to read it straight away, or it's picked up at the next import." : "It will be read at the next import."}`;
   }catch(e){
@@ -642,17 +642,20 @@ async function scanSave(){
 }
 const CAM_I = '<path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="14" r="3.5"/>';
 const FILE_I = '<path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5"/><path d="M12 17v-6M9 14l3-3 3 3"/>';
-function scanCard(){
+/* VAT month a scanned input invoice is added to: the month open in VAT workings, else last month */
+const scanVatMonth = () => ui.vatM || mPrev(T.slice(0,7));
+function scanCard(inVat){
   if(!assetsNS || !canWrite || !db) return "";
-  const waiting = SCANS.filter(x => x.status === "New").sort((a,b) => String(b.takenAt).localeCompare(String(a.takenAt)));
-  const recent = SCANS.filter(x => x.status !== "New").sort((a,b) => String(b.importedAt||b.takenAt).localeCompare(String(a.importedAt||a.takenAt))).slice(0,3);
+  const mine = x => !inVat || x.kind === "vatin";
+  const waiting = SCANS.filter(x => x.status === "New" && mine(x)).sort((a,b) => String(b.takenAt).localeCompare(String(a.takenAt)));
+  const recent = SCANS.filter(x => x.status !== "New" && mine(x)).sort((a,b) => String(b.importedAt||b.takenAt).localeCompare(String(a.importedAt||a.takenAt))).slice(0,3);
   const P = scanUI.pages;
   const row = x => { const pg = Array.isArray(x.pages) ? x.pages : [], first = pg.find(q => /^image\//.test(q.type||""));
     return `<div class="item" style="cursor:default"><div style="display:flex;gap:10px;align-items:center;min-width:0">${first ? `<img src="/_blob/${esc(first.id)}" alt="" style="width:38px;height:50px;object-fit:cover;border-radius:6px;border:1px solid var(--line);flex:none">` : ""}<div style="min-width:0"><div class="t">${esc(x.kindLabel || scanKindL(x.kind))}</div><div class="d">${esc([pg.length + " page" + (pg.length!==1?"s":""), fdate(String(x.takenAt).slice(0,10)), x.note, x.result].filter(Boolean).join(" · "))}</div></div></div>
       <div class="amt">${x.status === "New" ? chip("Waiting","warn") : x.status === "Imported" ? chip("Imported","good") : chip(x.status || "Checked", "bad")}</div></div>`; };
   return `<section class="card stack" id="scancard">
-    <div class="spread"><h3>Scan a document</h3>${waiting.length ? chip(waiting.length + " waiting","warn") : ""}</div>
-    <p class="note" style="margin:0">Photograph a bank statement, receipt, bill or tax payment. It's read and posted at the next import, the same as a file in the Drive folder.</p>
+    <div class="spread"><h3>${inVat ? "Photograph input VAT invoices" : "Scan a document"}</h3>${waiting.length ? chip(waiting.length + " waiting","warn") : ""}</div>
+    <p class="note" style="margin:0">${inVat ? `Photograph supplier tax invoices or a CusDec. At the next import each one is read and added to the input lines for <b>${mName(scanVatMonth())}</b>, with its checks. One invoice per scan; add pages if it runs over.` : "Photograph a bank statement, receipt, bill, tax payment or input VAT invoice. It's read and posted at the next import, the same as a file in the Drive folder."}</p>
     <div class="scanf">
       <select id="scankind" aria-label="What is it?">${SCAN_KINDS.map(([k,l]) => `<option value="${k}" ${k===scanUI.kind?"selected":""}>${l}</option>`).join("")}</select>
       ${P.length ? `<input id="scannote" type="text" maxlength="200" placeholder="Note for the import (optional), e.g. account or customer" value="${esc(scanUI.note)}">` : ""}
@@ -1085,6 +1088,7 @@ function viewVat(){
   const vi = vatTaxItem(m, "VAT"), si = vatTaxItem(m, "SSCL");
   const agree = (it, amt) => !it ? `<span class="note">no payment item</span>` : it.status === "Paid" ? (Math.abs(N(it.amount)-amt) < 1 ? chip("Paid · agrees","good") : chip(`Paid ${fm2(N(it.amount))}`,"bad")) : Math.abs(N(it.amount)-amt) < 1 ? chip("In tax list","good") : chip(N(it.amount) ? `Tax list ${fm(N(it.amount))}` : "Not in tax list yet","warn");
   const P = ui.vatPaste || (ui.vatPaste = { kind:"out", text:"", open:false, msg:"" });
+  if(!scanUI.pages.length && !scanUI.busy) scanUI.kind = "vatin";
   // quarter
   const q = QTR(m), qd = q.map(x => vatTotals(vatDoc(x))), have = q.filter(x => vatDoc(x)).length;
   const qs = k => r2(qd.reduce((s,x) => s + x[k], 0));
@@ -1092,7 +1096,7 @@ function viewVat(){
   const ret = D.tax.find(x => x.taxType === "VAT" && /return/i.test(x.item||"") && x.period === MON[+q[2].slice(5)-1] + " " + q[2].slice(0,4));
   const box16 = Math.max(0, qs("vat") - qs("ivat") - N((vatDoc(q[0])||{}).bf));
   const lineO = (l,i) => `<tr><td>${i+1}. ${esc(l.c)}<div class="note">${esc([fdate(l.d), l.ref, [l.proj, l.unit].filter(Boolean).join(" ")].filter(Boolean).join(" · "))}${N(l.gross) ? ` · land ${(N(l.land)/N(l.gross)*100).toFixed(3)}%` : ""}</div></td><td>${fm2(N(l.gross))}</td><td>${fm2(N(l.land))}</td><td>${fm2(N(l.value))}</td><td>${fm2(N(l.sscl))}</td><td>${fm2(N(l.vat))}</td>${can ? `<td><button class="btn small" type="button" data-act="vatrm" data-k="out" data-i="${i}" aria-label="Remove line ${i+1}">×</button></td>` : ""}</tr>`;
-  const lineI = (l,i) => `<tr><td>${i+1}. ${esc(l.s)}<div class="note">${esc([fdate(l.d), l.ref].filter(Boolean).join(" · "))}</div>${can ? `<button class="btn small" type="button" data-act="vatimp" data-i="${i}" style="margin-top:4px;padding:2px 8px;font-size:11px">${l.imp ? "Import · change to local" : "Local · mark as import"}</button>` : l.imp ? chip("Import") : ""}</td><td>${fm2(N(l.value))}</td><td>${fm2(N(l.vat))}</td><td>${fm2(N(l.gross))}</td>${can ? `<td><button class="btn small" type="button" data-act="vatrm" data-k="in" data-i="${i}" aria-label="Remove line ${i+1}">×</button></td>` : ""}</tr>`;
+  const lineI = (l,i) => `<tr><td>${i+1}. ${esc(l.s)}<div class="note">${esc([fdate(l.d), l.ref, l.vatNo ? "VAT " + l.vatNo : ""].filter(Boolean).join(" · "))}${l.src === "scan" ? " · from photo" : ""}</div>${can ? `<button class="btn small" type="button" data-act="vatimp" data-i="${i}" style="margin-top:4px;padding:2px 8px;font-size:11px">${l.imp ? "Import · change to local" : "Local · mark as import"}</button>` : l.imp ? chip("Import") : ""}</td><td>${fm2(N(l.value))}</td><td>${fm2(N(l.vat))}</td><td>${fm2(N(l.gross))}</td>${can ? `<td><button class="btn small" type="button" data-act="vatrm" data-k="in" data-i="${i}" aria-label="Remove line ${i+1}">×</button></td>` : ""}</tr>`;
   const ico = { bad:"var(--bad)", warn:"var(--warn)", info:"var(--muted)" };
   let mi = 0;
   return `
@@ -1125,6 +1129,7 @@ function viewVat(){
     ${C.length ? `<div class="list">${C.map(c => `<div class="item" style="cursor:default;border-left:3px solid ${ico[c[0]]}"><div><div class="t">${esc(c[1])}</div><div class="d">${esc(c[2])}</div></div>${c[3] && can ? `<div class="amt"><button class="btn small" data-act="vatadd" data-i="${mi++}">Add</button></div>` : ""}</div>`).join("")}</div>`
       : `<div class="card note">Every line adds up (land + value + SSCL 2.5% + VAT 18% = receipt), every receipt agrees to the app, and every input invoice is 18%.</div>`}
   </section>` : ""}
+  ${can ? scanCard(true) : ""}
   ${can ? `<section class="card stack">
     <div class="spread"><h3>Paste a schedule</h3>${P.open ? "" : `<button class="btn small" data-act="vatpopen">Open</button>`}</div>
     ${P.open ? `${subSeg("vpk", P.kind, [["out","Output (customer receipts)"],["in","Input (supplier invoices)"]])}
@@ -2224,7 +2229,7 @@ render();
   try{ canAdmin = userNS ? !!(await userNS.canEdit()) : false; }catch(e){ canAdmin = false; }
   db.collection("vat").onSnapshot(snap => { D.vat = snap.docs.map(d => Object.assign({id:d.id}, d.data())); if(!sheet && ui.view === "tax") render(); queueSnapshot(); }, () => {});
   db.collection("periods").onSnapshot(snap => { D.periods = snap.docs.map(d => Object.assign({id:d.id}, d.data())); loadedPeriods = true; if(!sheet) render(); queueSnapshot(); }, () => { loadedPeriods = true; });
-  if(assetsNS && canWrite) db.collection("scans").onSnapshot(snap => { SCANS = snap.docs.map(d => Object.assign({id:d.id}, d.data())); scansLoaded = true; if(!sheet && ui.view === "home") render(); }, () => { scansLoaded = true; });
+  if(assetsNS && canWrite) db.collection("scans").onSnapshot(snap => { SCANS = snap.docs.map(d => Object.assign({id:d.id}, d.data())); scansLoaded = true; if(!sheet && (ui.view === "home" || (ui.view === "tax" && ui.tSub === "vat"))) render(); }, () => { scansLoaded = true; });
   if(assetsNS) db.doc("sync/snapshot").onSnapshot(snap => { SNAPPTR = snap.exists ? snap.data() : null; }, () => {});
   setSync("on", canWrite ? "Live" : "Live · view only");
   db.doc("sync/latest").onSnapshot(snap => { SYNC = snap.exists ? snap.data() : null; if(!sheet && ui.view === "home") render(); }, () => {});
