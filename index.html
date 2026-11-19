@@ -95,7 +95,6 @@ html,body{margin:0;background:#1f242b;color:#f4f6f8}
   </form>
 </div>
 <div id="nxbar" hidden></div>
-
 <title>Nexus Finance Desk</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap">
@@ -188,6 +187,7 @@ button.kpi{display:block;width:100%}
 .pm{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px;margin-top:12px;font-size:13px}
 .pm .l{color:var(--muted)} .pm .n{font-weight:600}
 .auto{font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-left:4px}
+[hidden]{display:none!important}
 .scroll{overflow-x:auto}
 table{border-collapse:collapse;width:100%;font-size:13px}
 th,td{padding:8px 10px;text-align:right;border-top:1px solid var(--line);white-space:nowrap}
@@ -708,7 +708,7 @@ function fabFor(){
   if(ui.view === "cash") return ["banks","Bank balance"];
   if(ui.view === "recv") return ui.sSub === "units" ? ["units","Unit"] : ui.sSub === "b65" ? ["book65","Booking"] : ["recv","Instalment"];
   if(ui.view === "pay") return ui.cSub === "budget" ? (ui.proj ? ["costs","Cost line"] : ["projects","Project"]) : ["pay","Supplier bill"];
-  if(ui.view === "tax") return ["tax","Deadline"];
+  if(ui.view === "tax") return ui.tSub === "vat" ? null : ["tax","Deadline"];
   if(ui.view === "reports"){
     if(ui.rep === "proj") return ui.proj ? ["costs","Cost line"] : ["projects","Project"];
     return {pl:["pl","Month"], bs:["bs","Balance sheet"], units:["units","Unit"], loans:["loans","Loan"]}[ui.rep] || null;
@@ -889,6 +889,10 @@ function taxStatusChip(t){
   return chip(t.status || "To do");
 }
 function viewTax(){
+  const sub = ui.tSub === "vat" ? "vat" : "dl";
+  return `${exampleBanner()}<h2>Tax compliance</h2>${subSeg("tsub", sub, [["dl","Deadlines"],["vat","VAT workings"]])}` + (sub === "vat" ? viewVat() : viewTaxDeadlines());
+}
+function viewTaxDeadlines(){
   const f = ui.taxF;
   const all = D.tax.slice().sort((a,b)=>(a.dueDate||"").localeCompare(b.dueDate||""));
   const open = all.filter(t => t.status !== "Paid" && t.status !== "Filed");
@@ -896,8 +900,6 @@ function viewTax(){
   const next = open[0];
   const byType = {}; open.forEach(t => { byType[t.taxType||"Other"] = (byType[t.taxType||"Other"]||0) + 1; });
   return `
-  ${exampleBanner()}
-  <h2>Tax compliance</h2>
   ${next ? `<section class="card"><div class="eyebrow">Next deadline</div><div style="font-family:var(--f-display);font-size:20px;font-weight:700;margin-top:2px">${esc(next.item)}</div><div class="row" style="margin-top:6px">${taxStatusChip(next)}<span class="note">${fdate(next.dueDate)}${N(next.amount)?" · LKR "+fm(N(next.amount)):""}</span></div>
     <div class="note" style="margin-top:10px">${open.length} open item${open.length!==1?"s":""}: ${Object.entries(byType).map(([k,v])=>esc(k)+" "+v).join(" · ")}</div></section>` : ""}
   <div class="seg" role="group" aria-label="Filter">${[["upcoming","Open"],["done","Filed / paid"],["all","All"]].map(([k,l])=>`<button data-tf="${k}" aria-pressed="${f===k}">${l}</button>`).join("")}</div>
@@ -906,6 +908,246 @@ function viewTax(){
     <div class="amt">${N(t.amount) ? fm(N(t.amount)) : "—"}<small>${fdate(t.dueDate)}</small></div></button>`).join("")}</div>`
     : emptyState(D.tax.length ? "Nothing in this filter." : "No tax deadlines yet.", D.tax.length ? null : "tax")}
   <p class="note">Self-assessment calendar for Sri Lanka (Inland Revenue): income tax instalments on 15 Aug, 15 Nov, 15 Feb and 15 May; balance tax by 30 Sep; return by 30 Nov. VAT and SSCL paid by the 20th of the next month, VAT return by the 30th. WHT and APIT remitted by the 15th. Confirm each date against the IRD tax calendar.</p>`;
+}
+
+/* ---------- VAT workings: monthly output and input VAT (collection "vat", one document per month "yyyy-mm") ---------- */
+const VAT_R = 0.18, SSCL_R = 0.025;
+const r2 = n => Math.round(n * 100) / 100;
+const fm2 = n => (n < 0 ? "−" : "") + Math.abs(n).toLocaleString("en-US", { minimumFractionDigits:2, maximumFractionDigits:2 });
+const vatDoc = m => (D.vat || []).find(v => v.id === m) || null;
+const QTR = m => { const [y,mo] = m.split("-").map(Number); const s = mo >= 4 && mo <= 6 ? 4 : mo >= 7 && mo <= 9 ? 7 : mo >= 10 ? 10 : 1;
+  return [0,1,2].map(i => `${y}-${String(s+i).padStart(2,"0")}`); };
+const qName = m => { const q = QTR(m); return `${MON[+q[0].slice(5)-1]}–${MON[+q[2].slice(5)-1]} ${q[2].slice(0,4)}`; };
+const dmyIso = s => { const x = String(s||"").trim().match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4})$/); if(!x) return ""; return `${x[3]}-${x[2].padStart(2,"0")}-${x[1].padStart(2,"0")}`; };
+function vatTotals(v){
+  const o = (v && v.out) || [], i = (v && v.in) || [];
+  const t = { gross:0, land:0, value:0, sscl:0, vat:0, iv:0, ivat:0, ig:0 };
+  o.forEach(l => { t.gross += N(l.gross); t.land += N(l.land); t.value += N(l.value); t.sscl += N(l.sscl); t.vat += N(l.vat); });
+  i.forEach(l => { t.iv += N(l.value); t.ivat += N(l.vat); t.ig += N(l.gross); });
+  t.bf = N(v && v.bf); t.net = t.vat - t.ivat - t.bf;
+  Object.keys(t).forEach(k => t[k] = r2(t[k])); return t;
+}
+/* every app receipt in a month, with its unit */
+function appReceipts(m){
+  const out = [];
+  D.recv.forEach(r => (Array.isArray(r.receipts) ? r.receipts : []).forEach(x => { if(String(x.date||"").slice(0,7) === m) out.push({ no: x.no == null ? "" : String(x.no), date: x.date, amount: N(x.amount), customer: r.customer, project: r.project, unit: r.unit, ref: r.ref }); }));
+  return out;
+}
+const nameKey = s => String(s||"").toLowerCase().replace(/\b(mr|mrs|ms|miss|dr|rev)\b\.?/g," ").replace(/[^a-z ]/g," ").split(/\s+/).filter(w => w.length > 2);
+const sameName = (a,b) => { const A = nameKey(a), B = nameKey(b); return A.some(w => B.includes(w)); };
+/* land share of each receipt, learned from earlier schedules (same project and unit) */
+function landPctFor(proj, unit){
+  const docs = (D.vat||[]).slice().sort((a,b) => b.id.localeCompare(a.id));
+  for(const v of docs) for(const l of (v.out||[])) if(l.proj === proj && String(l.unit) === String(unit) && N(l.gross) > 0) return N(l.land) / N(l.gross);
+  return null;
+}
+function splitReceipt(gross, landPct){ const land = r2(gross * landPct); const value = r2((gross - land) / (1 + VAT_R + SSCL_R)); return { land, value, sscl: r2(value * SSCL_R), vat: r2(value * VAT_R) }; }
+function vatChecks(m, v){
+  const C = [], o = (v && v.out) || [], inl = (v && v.in) || [];
+  const [y] = m.split("-").map(Number);
+  o.forEach((l,i) => { const n = i+1, bad = [];
+    if(Math.abs(r2(N(l.value)*SSCL_R) - N(l.sscl)) > 0.02) bad.push(`SSCL ${fm2(N(l.sscl))} should be ${fm2(r2(N(l.value)*SSCL_R))}`);
+    if(Math.abs(r2(N(l.value)*VAT_R) - N(l.vat)) > 0.02) bad.push(`VAT ${fm2(N(l.vat))} should be ${fm2(r2(N(l.value)*VAT_R))}`);
+    if(Math.abs(N(l.value)+N(l.sscl)+N(l.vat)+N(l.land) - N(l.gross)) > 0.02) bad.push(`value + SSCL + VAT + land = ${fm2(N(l.value)+N(l.sscl)+N(l.vat)+N(l.land))}, receipt is ${fm2(N(l.gross))}`);
+    if(l.d && l.d.slice(0,7) !== m) bad.push(`dated ${fdate(l.d)}, outside ${mName(m)}`);
+    if(bad.length) C.push(["bad", `Output line ${n} · ${l.c}`, bad.join("; ")]); });
+  // land % consistent per unit
+  const lp = {}; o.forEach(l => { if(!l.unit || !N(l.gross)) return; const k = l.proj+" "+l.unit, p = N(l.land)/N(l.gross); (lp[k] = lp[k] || []).push(p); });
+  Object.entries(lp).forEach(([k,ps]) => { if(Math.max(...ps) - Math.min(...ps) > 0.0005) C.push(["warn", `Land share differs within ${k}`, ps.map(p => (p*100).toFixed(3)+"%").join(" vs ") + " – one unit should use one land %."]); });
+  // against the app's receipts
+  const rc = appReceipts(m), used = new Set();
+  o.forEach((l,i) => {
+    if(/^\d+$/.test(String(l.ref).trim())){
+      const a = rc.filter(x => x.no === String(l.ref).trim());
+      if(!a.length){ C.push(["warn", `Receipt ${l.ref} (${l.c}) isn't in the app`, `Schedule shows ${fm2(N(l.gross))} on ${fdate(l.d)}. Load the customer file or check the receipt number.`]); return; }
+      a.forEach(x => used.add(x));
+      const amt = r2(a.reduce((s,x) => s + x.amount, 0));
+      if(Math.abs(amt - N(l.gross)) > 0.01) C.push(["bad", `Receipt ${l.ref} · ${l.c}: amount differs`, `Schedule ${fm2(N(l.gross))}, app ${fm2(amt)} (difference ${fm2(r2(N(l.gross)-amt))}). Check the receipt book.`]);
+      else if(a[0].date !== l.d) C.push(["warn", `Receipt ${l.ref} · ${l.c}: date differs`, `Schedule ${fdate(l.d)}, app ${fdate(a[0].date)}.`]);
+    } else {
+      // sale agreement / other line: cash received to signing, in this month and earlier unnumbered receipts of the same customer
+      const unit = D.recv.find(r => sameName(r.customer, l.c) && (!l.unit || String(r.unit) === String(l.unit)));
+      if(unit){
+        const same = D.recv.filter(r => r.project === unit.project && String(r.unit) === String(unit.unit));
+        const pre = []; same.forEach(r => (r.receipts||[]).forEach(x => { if(!(x.no != null && /^\d+$/.test(String(x.no))) && String(x.date||"") <= mEnd(m)) pre.push({date:x.date, amount:N(x.amount)}); }));
+        rc.filter(x => !x.no && x.project === unit.project && String(x.unit) === String(unit.unit)).forEach(x => used.add(x));
+        const tot = r2(pre.reduce((s,x) => s + x.amount, 0));
+        const earlier = pre.filter(x => String(x.date).slice(0,7) < m);
+        if(Math.abs(tot - N(l.gross)) > 0.01) C.push(["warn", `${l.ref || "Line " + (i+1)} · ${l.c}`, `Schedule ${fm2(N(l.gross))}; app shows ${fm2(tot)} received without receipt numbers up to ${fdate(mEnd(m))} for ${unit.project} ${unit.unit}.`]);
+        else if(earlier.length) C.push(["info", `${l.ref || "Line " + (i+1)} · ${l.c} (${unit.project} ${unit.unit})`, `Agrees to the app: ${fm2(tot)} received to signing, of which ${fm2(r2(earlier.reduce((s,x)=>s+x.amount,0)))} came in before ${mName(m)} (${earlier.map(x => fdate(x.date)).join(", ")}). Make sure those earlier receipts weren't also in an earlier month's schedule.`]);
+      }
+    }
+  });
+  rc.filter(x => !used.has(x)).forEach(x => C.push(["warn", `In the app but not in the schedule: ${x.no ? "receipt " + x.no : "unnumbered receipt"} · ${x.customer}`, `${x.project} ${x.unit} · ${fm2(x.amount)} on ${fdate(x.date)}${x.no ? "" : " (" + (x.ref||"") + ")"}.`, x]));
+  // gaps in receipt numbers
+  const nos = o.map(l => String(l.ref).trim()).filter(s => /^\d+$/.test(s)).map(Number).sort((a,b)=>a-b);
+  for(let k = 1; k < nos.length; k++) for(let g = nos[k-1]+1; g < nos[k]; g++) if(!rc.some(x => x.no === String(g))) C.push(["warn", `Receipt ${g} is missing from the sequence`, `Not in the schedule or the app. If it was cancelled, keep the cancelled copy on file.`]);
+  // input
+  const refs = {};
+  inl.forEach((l,i) => { const n = i+1, bad = [];
+    if(Math.abs(r2(N(l.value)*VAT_R) - N(l.vat)) > 1) bad.push(`VAT ${fm2(N(l.vat))} is not 18% of ${fm2(N(l.value))}`);
+    if(N(l.gross) && Math.abs(N(l.value)+N(l.vat) - N(l.gross)) > 0.02) bad.push(`value + VAT = ${fm2(N(l.value)+N(l.vat))}, invoice total ${fm2(N(l.gross))}`);
+    const ly = +String(l.d).slice(0,4);
+    if(l.d && Math.abs(ly - y) > 1) bad.push(`dated ${fdate(l.d)} – year looks wrong`);
+    else if(l.d && l.d.slice(0,7) < m) C.push(["info", `Input line ${n} · ${l.s} is dated ${fdate(l.d)}`, `An earlier month's invoice: make sure it wasn't claimed in ${mName(l.d.slice(0,7))}.`]);
+    else if(l.d && l.d.slice(0,7) > m) bad.push(`dated ${fdate(l.d)}, after ${mName(m)}`);
+    if(/^\d{2}0CT_/.test(l.ref||"")) bad.push(`reference "${l.ref}" has a zero instead of the letter O`);
+    const k = (l.s+"|"+l.ref).toLowerCase(); if(refs[k]) bad.push(`same invoice as line ${refs[k]}`); refs[k] = n;
+    if(bad.length) C.push(["bad", `Input line ${n} · ${l.s}`, bad.join("; ")]); });
+  return C;
+}
+/* paste from Excel: output rows = [no] date customer receipt value sscl vat land total; input rows = [no] date supplier value vat total ref */
+function parseVatPaste(kind, text){
+  const rows = [], skipped = [];
+  String(text||"").split(/\r?\n/).forEach(line => {
+    if(!line.trim()) return;
+    const c = line.split("\t").map(s => s.trim());
+    const di = c.findIndex(s => dmyIso(s)); if(di < 0){ if(/\d/.test(line) && !/total|^\s*\t*\s*[\d,.\s\t]+$/i.test(line)) skipped.push(line.trim().slice(0,60)); return; }
+    const d = dmyIso(c[di]), rest = c.slice(di+1).filter(s => s !== "");
+    if(kind === "out"){
+      const nums = rest.slice(2).map(N);
+      if(rest.length < 7){ skipped.push(line.trim().slice(0,60)); return; }
+      rows.push({ d, c: rest[0], ref: rest[1], value: nums[0], sscl: nums[1], vat: nums[2], land: nums[3], gross: nums[4] });
+    } else {
+      if(rest.length < 4){ skipped.push(line.trim().slice(0,60)); return; }
+      const nums = rest.slice(1,4).map(N);
+      rows.push({ d, s: rest[0], value: nums[0], vat: nums[1], gross: nums[2], ref: rest[4] || "" });
+    }
+  });
+  return { rows, skipped };
+}
+function tagUnits(m, out){
+  const rc = appReceipts(m);
+  out.forEach(l => { if(l.proj) return;
+    const a = /^\d+$/.test(String(l.ref).trim()) ? rc.find(x => x.no === String(l.ref).trim()) : null;
+    const r = a ? { project:a.project, unit:a.unit } : D.recv.find(x => sameName(x.customer, l.c));
+    if(r){ l.proj = r.project; l.unit = r.unit; } });
+  return out;
+}
+async function vatSave(m, data, what){
+  if(!db || !canWrite) return false;
+  if(isClosed(m)){ toast(mName(m) + " is closed. Reopen it in Reports → Month-end first."); return false; }
+  const prev = vatDoc(m);
+  const d = stamp(prev, Object.assign({ month:m, out:[], in:[], bf:0 }, prev ? (({id, ...x}) => x)(prev) : {}, data), what);
+  try{ await db.collection("vat").doc(m).set(d); return true; }catch(e){ toast("Couldn't save. Check your connection."); return false; }
+}
+async function vatPasteApply(mode){
+  const m = ui.vatM, k = ui.vatPaste.kind, p = parseVatPaste(k, ui.vatPaste.text);
+  if(!p.rows.length){ ui.vatPaste.msg = "No rows found. Copy the rows from Excel (date, name, amounts) and paste them here."; render(); return; }
+  const v = vatDoc(m), cur = (v && v[k]) || [];
+  let rows = k === "out" ? tagUnits(m, p.rows) : p.rows;
+  rows = mode === "add" ? cur.concat(rows) : rows;
+  if(await vatSave(m, { [k]: rows }, `${k === "out" ? "Output" : "Input"} schedule ${mode === "add" ? "added to" : "loaded"}: ${p.rows.length} lines`)){
+    ui.vatPaste = { kind:k, text:"", open:false, msg: p.skipped.length ? `Loaded ${p.rows.length} lines. Skipped ${p.skipped.length} that didn't fit: ${p.skipped.slice(0,3).join(" | ")}` : `Loaded ${p.rows.length} lines.` };
+    render();
+  }
+}
+async function vatRemove(kind, i){ const m = ui.vatM, v = vatDoc(m); if(!v) return; const rows = (v[kind]||[]).slice(); const [x] = rows.splice(i,1); await vatSave(m, { [kind]: rows }, `Removed ${kind === "out" ? "output" : "input"} line: ${x ? (x.c || x.s) + " " + fm2(N(x.gross || x.value)) : ""}`); }
+async function vatAddReceipt(idx){
+  const m = ui.vatM, x = (ui._vatMissing || [])[idx]; if(!x) return;
+  const pct = landPctFor(x.project, x.unit);
+  if(pct == null){ toast(`No land % on file for ${x.project} ${x.unit} yet – paste the line from your schedule instead.`); return; }
+  const sp = splitReceipt(x.amount, pct);
+  const v = vatDoc(m), rows = ((v && v.out) || []).concat([Object.assign({ d:x.date, c:x.customer, ref:x.no || (x.ref||""), proj:x.project, unit:x.unit, gross:x.amount }, sp)]).sort((a,b) => String(a.d).localeCompare(String(b.d)));
+  await vatSave(m, { out: rows }, `Added receipt ${x.no || ""} ${x.customer} ${fm2(x.amount)} (land ${(pct*100).toFixed(3)}%)`);
+}
+function vatTaxItem(m, type){ const p = mName(m).replace(/^(\w{3})\w*/, "$1"); return D.tax.find(t => t.taxType === type && /payment/i.test(t.item||"") && (t.period === p || String(t.item||"").includes(mName(m)))); }
+async function vatPushToTax(){
+  const m = ui.vatM, t = vatTotals(vatDoc(m)); let n = 0;
+  for(const [type, amt] of [["VAT", Math.max(0, t.net)], ["SSCL", t.sscl]]){
+    const it = vatTaxItem(m, type); if(!it || it.status === "Paid" || Math.abs(N(it.amount) - amt) < 1) continue;
+    const nd = stamp(it, Object.assign({}, it, { amount: amt }), `amount ${fm(N(it.amount))} → ${fm2(amt)} from VAT workings`); delete nd.id;
+    try{ await db.collection("tax").doc(it.id).set(nd); n++; }catch(e){ toast("Couldn't update the tax item."); return; }
+  }
+  toast(n ? `Updated ${n} payment item${n>1?"s":""} in the tax list` : "Tax items already agree");
+}
+async function vatExport(){
+  if(!dl){ toast("Downloads aren't available here"); return; }
+  const m = ui.vatM, v = vatDoc(m) || {}, t = vatTotals(v);
+  try{
+    const X = await loadXLSX(), wb = X.utils.book_new();
+    const add = (name, aoa, w) => { const ws = X.utils.aoa_to_sheet(aoa); ws["!cols"] = aoa[0].map((_,i) => ({ wch: (w && w[i]) || 16 })); X.utils.book_append_sheet(wb, ws, name); };
+    add("Summary", [[`VAT calculation – ${mName(m)}`,""],["Nexus Property Developers (Pvt) Ltd · TIN 114446548",""],[],["Output VAT on cash received from customers", t.vat],["Less input VAT paid to suppliers", t.ivat],["Less input VAT brought forward", t.bf],["Net VAT payable", t.net],[],["SSCL payable (2.5% of value of supply)", t.sscl],[],["Value of supply (box A)", t.value],["Land value excluded", t.land],["Cash received from customers", t.gross],["Local purchases (box I)", t.iv]], [46,18]);
+    add("Output", [["#","Date","Customer","Receipt","Project","Unit","Value of supply","SSCL 2.5%","VAT 18%","Land","Received"]].concat((v.out||[]).map((l,i) => [i+1, l.d, l.c, l.ref, l.proj||"", l.unit||"", N(l.value), N(l.sscl), N(l.vat), N(l.land), N(l.gross)])).concat([["","","Total","","","",t.value,t.sscl,t.vat,t.land,t.gross]]), [4,11,32,14,14,6,16,13,14,14,16]);
+    add("Input", [["#","Date","Supplier","Value","VAT 18%","Total","Invoice ref"]].concat((v.in||[]).map((l,i) => [i+1, l.d, l.s, N(l.value), N(l.vat), N(l.gross), l.ref])).concat([["","","Total",t.iv,t.ivat,t.ig,""]]), [4,11,40,14,13,14,30]);
+    await dl.save({ filename:`VAT workings ${mName(m)}.xlsx`, data: new Uint8Array(X.write(wb, { bookType:"xlsx", type:"array" })) });
+  }catch(e){ if(!(e && e.code === "declined")) toast("Couldn't prepare the file."); }
+}
+function viewVat(){
+  if(!ui.vatM) ui.vatM = mPrev(T.slice(0,7));
+  const m = ui.vatM, v = vatDoc(m), t = vatTotals(v), closed = isClosed(m), can = canWrite && db && !closed;
+  const o = (v && v.out) || [], inl = (v && v.in) || [];
+  const C = v ? vatChecks(m, v) : [];
+  ui._vatMissing = C.filter(c => c[3]).map(c => c[3]);
+  const due = `20 ${MON[+mNext(m).slice(5)-1]} ${mNext(m).slice(0,4)}`;
+  const vi = vatTaxItem(m, "VAT"), si = vatTaxItem(m, "SSCL");
+  const agree = (it, amt) => !it ? `<span class="note">no payment item</span>` : it.status === "Paid" ? (Math.abs(N(it.amount)-amt) < 1 ? chip("Paid · agrees","good") : chip(`Paid ${fm2(N(it.amount))}`,"bad")) : Math.abs(N(it.amount)-amt) < 1 ? chip("In tax list","good") : chip(N(it.amount) ? `Tax list ${fm(N(it.amount))}` : "Not in tax list yet","warn");
+  const P = ui.vatPaste || (ui.vatPaste = { kind:"out", text:"", open:false, msg:"" });
+  // quarter
+  const q = QTR(m), qd = q.map(x => vatTotals(vatDoc(x))), have = q.filter(x => vatDoc(x)).length;
+  const qs = k => r2(qd.reduce((s,x) => s + x[k], 0));
+  const paid = r2(q.reduce((s,x) => { const it = vatTaxItem(x, "VAT"); return s + (it && it.status === "Paid" ? N(it.amount) : 0); }, 0));
+  const ret = D.tax.find(x => x.taxType === "VAT" && /return/i.test(x.item||"") && x.period === MON[+q[2].slice(5)-1] + " " + q[2].slice(0,4));
+  const box16 = Math.max(0, qs("vat") - qs("ivat") - N((vatDoc(q[0])||{}).bf));
+  const lineO = (l,i) => `<tr><td>${i+1}. ${esc(l.c)}<div class="note">${esc([fdate(l.d), l.ref, [l.proj, l.unit].filter(Boolean).join(" ")].filter(Boolean).join(" · "))}${N(l.gross) ? ` · land ${(N(l.land)/N(l.gross)*100).toFixed(3)}%` : ""}</div></td><td>${fm2(N(l.gross))}</td><td>${fm2(N(l.land))}</td><td>${fm2(N(l.value))}</td><td>${fm2(N(l.sscl))}</td><td>${fm2(N(l.vat))}</td>${can ? `<td><button class="btn small" type="button" data-act="vatrm" data-k="out" data-i="${i}" aria-label="Remove line ${i+1}">×</button></td>` : ""}</tr>`;
+  const lineI = (l,i) => `<tr><td>${i+1}. ${esc(l.s)}<div class="note">${esc([fdate(l.d), l.ref].filter(Boolean).join(" · "))}</div></td><td>${fm2(N(l.value))}</td><td>${fm2(N(l.vat))}</td><td>${fm2(N(l.gross))}</td>${can ? `<td><button class="btn small" type="button" data-act="vatrm" data-k="in" data-i="${i}" aria-label="Remove line ${i+1}">×</button></td>` : ""}</tr>`;
+  const ico = { bad:"var(--bad)", warn:"var(--warn)", info:"var(--muted)" };
+  let mi = 0;
+  return `
+  <div class="spread" style="align-items:center"><button class="btn small" data-act="vatm" data-m="${mPrev(m)}" aria-label="Previous month">‹</button><h3 style="margin:0">${mName(m)}${closed ? " " + chip("Closed") : ""}</h3><button class="btn small" data-act="vatm" data-m="${mNext(m)}" aria-label="Next month">›</button></div>
+  <section class="hero" style="border-left-color:${t.net > 0 ? "var(--warn)" : "var(--good)"}">
+    <div class="eyebrow">Net VAT payable · due ${due}</div>
+    <div class="big">LKR ${fm2(Math.max(0, t.net))}</div>
+    <div class="meta">${v ? `Output ${fm2(t.vat)} − input ${fm2(t.ivat)}${t.bf ? ` − b/f ${fm2(t.bf)}` : ""}${t.net < 0 ? ` · excess input ${fm2(-t.net)} carried forward` : ""}` : "No workings for this month yet. Paste your output and input schedules below."}</div>
+  </section>
+  ${v ? `<section class="card stack">
+    <div class="stmt one">
+      <div class="hd"><span>VAT calculation</span><span>LKR</span></div>
+      <div><span>Output VAT on cash received from customers (${o.length} lines)</span><span>${fm2(t.vat)}</span></div>
+      <div><span>Less input VAT paid to suppliers (${inl.length} invoices)</span><span>(${fm2(t.ivat)})</span></div>
+      ${t.bf ? `<div><span>Less excess input brought forward</span><span>(${fm2(t.bf)})</span></div>` : ""}
+      <div class="sum"><span>Net VAT payable<div style="margin-top:4px;font-weight:400">${agree(vi, Math.max(0,t.net))}</div></span><span>${fm2(Math.max(0,t.net))}</span></div>
+      <div class="sum"><span>SSCL payable (2.5% of value of supply)<div style="margin-top:4px;font-weight:400">${agree(si, t.sscl)}</div></span><span>${fm2(t.sscl)}</span></div>
+    </div>
+    <div class="stmt one" style="font-size:13px">
+      <div class="ind"><span>Cash received from customers</span><span>${fm2(t.gross)}</span></div>
+      <div class="ind"><span>Less land value excluded</span><span>(${fm2(t.land)})</span></div>
+      <div class="ind"><span>Less SSCL and VAT included</span><span>(${fm2(r2(t.gross - t.land - t.value))})</span></div>
+      <div class="ind"><span>Value of supply (return box A)</span><span>${fm2(t.value)}</span></div>
+      <div class="ind"><span>Local purchases, net of VAT (box I)</span><span>${fm2(t.iv)}</span></div>
+    </div>
+    <div class="row">${can && ((vi && vi.status !== "Paid" && Math.abs(N(vi.amount)-Math.max(0,t.net)) >= 1) || (si && si.status !== "Paid" && Math.abs(N(si.amount)-t.sscl) >= 1)) ? `<button class="btn small primary" data-act="vattax">Put these amounts in the tax list</button>` : ""}${dl ? `<button class="btn small" data-act="vatxl">Download Excel workings</button>` : ""}</div>
+  </section>` : ""}
+  ${v ? `<section class="stack"><div class="spread"><h3>Checks</h3>${C.filter(c=>c[0]==="bad").length ? chip(C.filter(c=>c[0]==="bad").length + " to fix","bad") : C.length ? chip(C.length + " to review","warn") : chip("All agree","good")}</div>
+    ${C.length ? `<div class="list">${C.map(c => `<div class="item" style="cursor:default;border-left:3px solid ${ico[c[0]]}"><div><div class="t">${esc(c[1])}</div><div class="d">${esc(c[2])}</div></div>${c[3] && can ? `<div class="amt"><button class="btn small" data-act="vatadd" data-i="${mi++}">Add</button></div>` : ""}</div>`).join("")}</div>`
+      : `<div class="card note">Every line adds up (land + value + SSCL 2.5% + VAT 18% = receipt), every receipt agrees to the app, and every input invoice is 18%.</div>`}
+  </section>` : ""}
+  ${can ? `<section class="card stack">
+    <div class="spread"><h3>Paste a schedule</h3>${P.open ? "" : `<button class="btn small" data-act="vatpopen">Open</button>`}</div>
+    ${P.open ? `${subSeg("vpk", P.kind, [["out","Output (customer receipts)"],["in","Input (supplier invoices)"]])}
+      <p class="note" style="margin:0">${P.kind === "out" ? "Copy the rows from your Excel output schedule: no., date, customer, receipt no., value, SSCL, VAT, land, total received." : "Copy the rows from your Excel input schedule: no., date, supplier, value, VAT, total, invoice reference."} Header and total rows are ignored.</p>
+      <textarea id="vatpaste" rows="6" style="width:100%;box-sizing:border-box;border:1px solid var(--line);background:var(--surface-2);border-radius:10px;padding:10px;font:13px ui-monospace,monospace" placeholder="Paste here">${esc(P.text)}</textarea>
+      <div class="row"><button class="btn small primary" data-act="vatpreplace">${(v && (v[P.kind]||[]).length) ? "Replace " + (P.kind === "out" ? "output" : "input") + " lines" : "Load lines"}</button>${v && (v[P.kind]||[]).length ? `<button class="btn small" data-act="vatpadd">Add to existing</button>` : ""}<button class="btn small" data-act="vatpclose">Cancel</button></div>` : `<p class="note" style="margin:0">Paste rows straight from your Excel output or input schedule; the app checks every line.</p>`}
+    ${P.msg ? `<p class="note" style="margin:0">${esc(P.msg)}</p>` : ""}
+  </section>` : closed ? `<p class="note">${mName(m)} is closed, so its VAT workings are locked.</p>` : ""}
+  ${o.length ? `<section class="stack"><h3>Output VAT · cash received from customers</h3><div class="card" style="padding:0"><div class="scroll"><table class="qt"><thead><tr><th>Customer</th><th>Received</th><th>Land</th><th>Value</th><th>SSCL</th><th>VAT</th>${can?"<th></th>":""}</tr></thead><tbody>${o.map(lineO).join("")}
+    <tr class="tot"><td>Total</td><td>${fm2(t.gross)}</td><td>${fm2(t.land)}</td><td>${fm2(t.value)}</td><td>${fm2(t.sscl)}</td><td>${fm2(t.vat)}</td>${can?"<td></td>":""}</tr></tbody></table></div></div></section>` : ""}
+  ${inl.length ? `<section class="stack"><h3>Input VAT · supplier invoices</h3><div class="card" style="padding:0"><div class="scroll"><table class="qt"><thead><tr><th>Supplier</th><th>Value</th><th>VAT</th><th>Total</th>${can?"<th></th>":""}</tr></thead><tbody>${inl.map(lineI).join("")}
+    <tr class="tot"><td>Total</td><td>${fm2(t.iv)}</td><td>${fm2(t.ivat)}</td><td>${fm2(t.ig)}</td>${can?"<td></td>":""}</tr></tbody></table></div></div></section>` : ""}
+  <section class="card stack"><div class="spread"><h3>Quarterly return · ${qName(m)}</h3>${chip(have + " of 3 months", have === 3 ? "good" : "")}</div>
+    <div class="stmt one">
+      <div class="hd"><span>RAMIS box</span><span>Workings</span></div>
+      <div><span>A · Taxable supplies</span><span>${fm2(qs("value"))}</span></div>
+      <div><span>0 · Output tax</span><span>${fm2(qs("vat"))}</span></div>
+      <div><span>I · Local purchases</span><span>${fm2(qs("iv"))}</span></div>
+      <div><span>6 / 9 · Input tax</span><span>${fm2(qs("ivat"))}</span></div>
+      <div class="sum"><span>16 · Tax payable${ret && N(ret.amount) ? `<div class="note" style="font-weight:400">Filed return: ${fm(N(ret.amount))}</div>` : ""}</span><span>${fm2(box16)}</span></div>
+      <div><span>Q · Monthly payments made</span><span>(${fm2(paid)})</span></div>
+      <div class="sum"><span>18 · Balance payable with the return</span><span>${fm2(r2(box16 - paid))}</span></div>
+      <div><span>SSCL · liable turnover × 2.5%</span><span>${fm2(qs("sscl"))}</span></div>
+    </div>
+    <p class="note" style="margin:0">${q.map(x => `${MON[+x.slice(5)-1]}: ${vatDoc(x) ? "workings in" : "not loaded"}`).join(" · ")}. Return due 30 ${MON[+mNext(q[2]).slice(5)-1]} ${mNext(q[2]).slice(0,4)}; payments counted only when the month's VAT payment is marked Paid.</p>
+  </section>`;
 }
 
 /* ---- reports ---- */
@@ -1823,6 +2065,8 @@ document.addEventListener("click", e => {
   if(d.rp){ ui.recvP = d.rp; render(); return; }
   if(d.pf){ ui.payF = d.pf; render(); return; }
   if(d.tf){ ui.taxF = d.tf; render(); return; }
+  if(d.tsub){ ui.tSub = d.tsub; render(); window.scrollTo(0,0); return; }
+  if(d.vpk){ ui.vatPaste.kind = d.vpk; ui.vatPaste.msg = ""; render(); return; }
   if(d.rep){ if(sheet) closeSheet(); if(d.rep === "units"){ ui.view = "recv"; ui.sSub = "units"; ui.proj = null; render(); window.scrollTo(0,0); return; } ui.rep = d.rep; ui.proj = null; ui.view = "reports"; render(); window.scrollTo(0,0); return; }
   if(d.fy){ ui.fy = d.fy; render(); return; }
   if(d.proj){ ui.proj = d.proj; render(); window.scrollTo(0,0); return; }
@@ -1860,6 +2104,15 @@ document.addEventListener("click", e => {
     case "exno": render(); return;
     case "data": openData(); return;
     case "importnow": importNow(); return;
+    case "vatm": ui.vatM = t.dataset.m; ui.vatPaste.msg = ""; render(); return;
+    case "vatpopen": ui.vatPaste.open = true; ui.vatPaste.msg = ""; render(); setTimeout(() => { const a = $("#vatpaste"); if(a) a.focus(); }, 30); return;
+    case "vatpclose": ui.vatPaste = { kind: ui.vatPaste.kind, text:"", open:false, msg:"" }; render(); return;
+    case "vatpreplace": { const v = vatDoc(ui.vatM), k = ui.vatPaste.kind; if(v && (v[k]||[]).length && !t.dataset.sure){ t.dataset.sure = "1"; t.textContent = "Tap again to replace " + (v[k]||[]).length + " lines"; return; } vatPasteApply("replace"); return; }
+    case "vatpadd": vatPasteApply("add"); return;
+    case "vatrm": vatRemove(t.dataset.k, +t.dataset.i); return;
+    case "vatadd": vatAddReceipt(+t.dataset.i); return;
+    case "vattax": vatPushToTax(); return;
+    case "vatxl": vatExport(); return;
     case "scancam": $("#scan-cam").click(); return;
     case "scanpick": $("#scan-pick").click(); return;
     case "scanrm": { const i = +t.dataset.i, p = scanUI.pages[i]; if(p && p.url) URL.revokeObjectURL(p.url); scanUI.pages.splice(i,1); render(); return; }
@@ -1882,7 +2135,7 @@ document.addEventListener("change", e => {
   if(e.target.id === "imp-col"){ imp = null; const o = $("#imp-out"); if(o) o.innerHTML = ""; }
   if(sheet && sheet.col === "units" && e.target.closest("#sheetform")) previewSchedule();
 });
-document.addEventListener("input", e => { if(e.target.id === "scannote"){ scanUI.note = e.target.value; return; } if(sheet && sheet.col === "units" && e.target.closest("#sheetform")){ clearTimeout(previewSchedule.t); previewSchedule.t = setTimeout(previewSchedule, 250); } });
+document.addEventListener("input", e => { if(e.target.id === "vatpaste"){ ui.vatPaste.text = e.target.value; return; } if(e.target.id === "scannote"){ scanUI.note = e.target.value; return; } if(sheet && sheet.col === "units" && e.target.closest("#sheetform")){ clearTimeout(previewSchedule.t); previewSchedule.t = setTimeout(previewSchedule, 250); } });
 document.addEventListener("submit", e => { if(e.target.id === "sheetform"){ e.preventDefault(); save(); } });
 document.addEventListener("keydown", e => { if(e.key === "Escape" && sheet) closeSheet(); });
 const _schedRun = schedAfter.run;
@@ -1939,7 +2192,7 @@ function queueSnapshot(){
   snapTimer = setTimeout(async () => {
     try{
       const docs = { "sync/latest": SYNC, "feasibility/p65": FEAS, "feasibility/ffs2627": FFS };
-      const cols = {}; COLS.forEach(c => cols[c] = D[c]); cols.periods = D.periods || [];
+      const cols = {}; COLS.forEach(c => cols[c] = D[c]); cols.periods = D.periods || []; cols.vat = D.vat || [];
       const key = JSON.stringify({ cols, docs });
       if(key === snapLastKey) return;
       const at = new Date().toISOString();
@@ -1963,6 +2216,7 @@ render();
   try{ isOwnerView = userNS ? await userNS.isOwner() : false; if(isOwnerView) mcpNS = await window.claude.use("mcp"); }catch(e){ mcpNS = null; }
   if(canWrite){ try{ assetsNS = await window.claude.use("assets"); }catch(e){ assetsNS = null; } }
   try{ canAdmin = userNS ? !!(await userNS.canEdit()) : false; }catch(e){ canAdmin = false; }
+  db.collection("vat").onSnapshot(snap => { D.vat = snap.docs.map(d => Object.assign({id:d.id}, d.data())); if(!sheet && ui.view === "tax") render(); queueSnapshot(); }, () => {});
   db.collection("periods").onSnapshot(snap => { D.periods = snap.docs.map(d => Object.assign({id:d.id}, d.data())); loadedPeriods = true; if(!sheet) render(); queueSnapshot(); }, () => { loadedPeriods = true; });
   if(assetsNS && canWrite) db.collection("scans").onSnapshot(snap => { SCANS = snap.docs.map(d => Object.assign({id:d.id}, d.data())); scansLoaded = true; if(!sheet && ui.view === "home") render(); }, () => { scansLoaded = true; });
   if(assetsNS) db.doc("sync/snapshot").onSnapshot(snap => { SNAPPTR = snap.exists ? snap.data() : null; }, () => {});
@@ -1981,7 +2235,6 @@ render();
 })();
 })();
 </script>
-
 
 
 
