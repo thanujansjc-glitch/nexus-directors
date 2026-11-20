@@ -95,6 +95,7 @@ html,body{margin:0;background:#1f242b;color:#f4f6f8}
   </form>
 </div>
 <div id="nxbar" hidden></div>
+
 <title>Nexus Finance Desk</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap">
@@ -593,27 +594,40 @@ const SCAN_KINDS = [["vatin","Input VAT invoice (supplier tax invoice or CusDec)
 const scanKindL = k => (SCAN_KINDS.find(x => x[0] === k) || [k, "Document"])[1];
 let SCANS = [], scansLoaded = false;
 const scanUI = { kind:"bank", note:"", pages:[], busy:false, msg:"", err:false };
-async function shrinkImage(file){
-  if(!/^image\//.test(file.type) || file.type === "image/svg+xml") return file;
-  try{
-    const bmp = await createImageBitmap(file, { imageOrientation:"from-image" });
-    const k = Math.min(1, 2400 / Math.max(bmp.width, bmp.height));
-    const c = document.createElement("canvas"); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
-    const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.drawImage(bmp, 0, 0, c.width, c.height);
-    const b = await new Promise(r => c.toBlob(r, "image/jpeg", 0.86));
-    return b && b.size < file.size ? b : file;
-  }catch(e){ return file; }
+const OK_TYPES = ["image/jpeg","image/png","image/webp","image/gif","application/pdf"];
+const extType = n => { const e = String(n||"").toLowerCase().split(".").pop(); return { jpg:"image/jpeg", jpeg:"image/jpeg", png:"image/png", webp:"image/webp", gif:"image/gif", pdf:"application/pdf", heic:"image/heic", heif:"image/heif" }[e] || ""; };
+/* decode any photo the browser can read (incl. iPhone HEIC in Safari) and re-save it as JPEG, at most 2400px */
+async function toJpeg(file){
+  let src = null, w = 0, h = 0, url = null;
+  try{ src = await createImageBitmap(file, { imageOrientation:"from-image" }); w = src.width; h = src.height; }
+  catch(e){
+    url = URL.createObjectURL(file);
+    src = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = url; }).catch(() => null);
+    if(src){ w = src.naturalWidth; h = src.naturalHeight; }
+  }
+  if(!src || !w){ if(url) URL.revokeObjectURL(url); return null; }
+  const k = Math.min(1, 2400 / Math.max(w, h));
+  const c = document.createElement("canvas"); c.width = Math.round(w * k); c.height = Math.round(h * k);
+  const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.drawImage(src, 0, 0, c.width, c.height);
+  if(url) URL.revokeObjectURL(url);
+  return await new Promise(r => c.toBlob(r, "image/jpeg", 0.86));
 }
 async function scanAdd(files){
   const list = [...(files || [])]; if(!list.length) return;
-  scanUI.msg = ""; scanUI.err = false;
+  scanUI.msg = ""; scanUI.err = false; scanUI.busy = true; render();
   for(const f of list){
-    if(!/^image\//.test(f.type) && f.type !== "application/pdf"){ scanUI.err = true; scanUI.msg = f.name + " isn't a photo or PDF."; continue; }
-    const blob = await shrinkImage(f);
-    if(blob.size > 19.5 * 1024 * 1024){ scanUI.err = true; scanUI.msg = f.name + " is over 20 MB. Take the photo again at a lower resolution."; continue; }
-    scanUI.pages.push({ blob, type: blob.type || f.type, name: f.name || "photo.jpg", url: /^image\//.test(blob.type || f.type) ? URL.createObjectURL(blob) : "" });
+    const type = (f.type || extType(f.name) || "").toLowerCase();
+    let blob = null, bt = "";
+    if(type === "application/pdf"){ blob = f; bt = type; }
+    else{
+      blob = await toJpeg(f); bt = "image/jpeg";                                   // every photo becomes a JPEG
+      if(!blob && OK_TYPES.includes(type)){ blob = f; bt = type; }                 // couldn't decode but already an accepted type
+    }
+    if(!blob){ scanUI.err = true; scanUI.msg = `${f.name || "That photo"} couldn't be read${/hei[cf]/.test(type) ? " (HEIC format)" : ""}. On iPhone: Settings → Camera → Formats → Most Compatible, or take it with the Take photo button.`; continue; }
+    if(blob.size > 19.5 * 1024 * 1024){ scanUI.err = true; scanUI.msg = (f.name || "The file") + " is over 20 MB."; continue; }
+    scanUI.pages.push({ blob, type: bt, name: f.name || "photo.jpg", url: bt.startsWith("image/") ? URL.createObjectURL(blob) : "" });
   }
-  render();
+  scanUI.busy = false; render();
 }
 function scanClear(){ scanUI.pages.forEach(p => p.url && URL.revokeObjectURL(p.url)); scanUI.pages = []; scanUI.note = ""; }
 async function scanSave(){
@@ -2246,6 +2260,7 @@ render();
 })();
 })();
 </script>
+
 
 
 
