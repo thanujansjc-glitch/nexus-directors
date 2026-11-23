@@ -1607,20 +1607,25 @@ function budgetFigures(p){
   return f;
 }
 function budgetLines(f){ const L = f.lines.filter(c => Array.isArray(c.items) && c.items.length).sort((a,b) => N(b.budget) - N(a.budget)), tot = sum(f.lines, c => N(c.budget));
-    return `<section class="stack"><h3>Line by line</h3>
+  const hasAct = L.some(c => c.items.some(i => i.actual != null)), asOf = (L.find(c => c.actualAsOf) || {}).actualAsOf;
+  const usedChip = (a, b) => { if(!b) return a ? chip("no budget","bad") : ""; const u = a / b * 100; return u > 100.5 ? chip(u.toFixed(0) + "%","bad") : u > 90 ? chip(u.toFixed(0) + "%","warn") : `<span class="note">${u.toFixed(0)}%</span>`; };
+  const ledger = i => Array.isArray(i.ledger) && i.ledger.length ? `<div class="note" style="font-size:11.5px;margin:2px 0 4px 14px">${i.ledger.map(x => `${esc(x.item)} ${fm(N(x.amount))}`).join(" · ")}</div>` : "";
+  return `<section class="stack"><div class="spread"><h3>Line by line</h3>${hasAct ? `<span class="note">Budget · actual${asOf ? " to " + fdate(asOf) : ""} · % used</span>` : ""}</div>
     <div class="list" style="display:flex">${L.map(c => { const groups = {}; c.items.forEach(i => (groups[i.group || ""] = groups[i.group || ""] || []).push(i));
-      return `<details class="item" style="display:block;cursor:pointer"><summary class="spread" style="list-style:none"><span><b>${esc(c.head)}</b> <span class="note">· ${c.items.length} line${c.items.length>1?"s":""}</span></span><span><b>${fmM(N(c.budget))}</b> <span class="note">${tot ? (N(c.budget)/tot*100).toFixed(1) : 0}%</span></span></summary>
-        <div class="stmt one" style="margin-top:8px;font-size:13px">${Object.entries(groups).map(([g, it]) => `${g && Object.keys(groups).length > 1 ? `<div class="hd"><span>${esc(g)}</span><span>${fm(sum(it, i => N(i.amount)))}</span></div>` : ""}${it.map(i => `<div class="ind"><span>${esc(i.line ? i.line + " · " : "")}${esc(i.item)}</span><span>${fm(N(i.amount))}</span></div>`).join("")}`).join("")}</div>
-        ${f.sqft ? `<p class="note" style="margin:6px 0 0">LKR ${fm(N(c.budget)/f.sqft)} per sellable sq.ft</p>` : ""}</details>`; }).join("")}</div>
+      const ca = sum(c.items, i => N(i.actual)), over = c.items.filter(i => N(i.actual) > N(i.amount) + 1).length;
+      return `<details class="item" style="display:block;cursor:pointer"><summary class="spread" style="list-style:none"><span><b>${esc(c.head)}</b> <span class="note">· ${c.items.length} line${c.items.length>1?"s":""}</span>${over ? " " + chip(over + " over","bad") : ""}</span><span>${hasAct ? `<span class="note">${fmM(ca)} of </span>` : ""}<b>${fmM(N(c.budget))}</b> ${hasAct ? usedChip(ca, N(c.budget)) : `<span class="note">${tot ? (N(c.budget)/tot*100).toFixed(1) : 0}%</span>`}</span></summary>
+        <div class="stmt one" style="margin-top:8px;font-size:13px">${Object.entries(groups).map(([g, it]) => `${g && Object.keys(groups).length > 1 ? `<div class="hd"><span>${esc(g)}</span><span>${hasAct ? fm(sum(it, i => N(i.actual))) + " / " : ""}${fm(sum(it, i => N(i.amount)))}</span></div>` : ""}${it.map(i => `<div class="ind"><span>${esc(i.line ? i.line + " · " : "")}${esc(i.item)}</span><span>${hasAct ? `${fm(N(i.actual))} / ` : ""}${fm(N(i.amount))}${hasAct ? " " + usedChip(N(i.actual), N(i.amount)) : ""}</span></div>${hasAct ? ledger(i) : ""}`).join("")}`).join("")}</div>
+        ${f.sqft ? `<p class="note" style="margin:6px 0 0">Budget LKR ${fm(N(c.budget)/f.sqft)} per sellable sq.ft${hasAct ? ` · actual LKR ${fm(ca/f.sqft)}` : ""}</p>` : ""}</details>`; }).join("")}</div>
+    ${hasAct ? `<p class="note" style="margin:0">Budget = forecast final cost. Under each line are the ledger items counted in its actual.</p>` : ""}
     ${f.lines.some(c => !(Array.isArray(c.items) && c.items.length)) ? `<p class="note" style="margin:0">Not in the estimate: ${f.lines.filter(c => !(Array.isArray(c.items) && c.items.length)).map(c => `${esc(c.head)} ${fmM(N(c.budget))}`).join(", ")}.</p>` : ""}</section>`; }
 
 /* line-by-line comparison across projects (matched on line number, or name when there is none) */
 function budgetCompare(F){
-  const per = ui.bPer === "sqft", rows = {}, ord = [];
+  const per = ui.bPer === "sqft", act = ui.bWhat === "actual", rows = {}, ord = [];
   F.forEach((f, k) => f.lines.forEach(c => (Array.isArray(c.items) ? c.items : []).forEach(it => {
     const key = it.line ? "L" + it.line : "N" + String(it.item).toLowerCase();
     if(!rows[key]){ rows[key] = { line: it.line, item: it.item, group: it.group || c.head, head: c.head, v: F.map(() => 0) }; ord.push(key); }
-    rows[key].v[k] += N(it.amount); })));
+    rows[key].v[k] += act ? N(it.actual) : N(it.amount); })));
   if(!ord.length) return `<div class="card note">Line items appear here once each project's cost report is loaded by line.</div>`;
   const groups = []; ord.sort((a,b) => (rows[a].line||999) - (rows[b].line||999)).forEach(k => { const g = rows[k].group; let G = groups.find(x => x.g === g); if(!G){ G = { g, keys: [] }; groups.push(G); } G.keys.push(k); });
   const val = (v, f) => !v ? `<span class="note">–</span>` : per ? (f.sqft ? fm(v / f.sqft) : "–") : fm(v);
@@ -1628,7 +1633,7 @@ function budgetCompare(F){
   const chg = r => { const ps = bench.filter((f,k) => r.v[k] && f.sqft).map(f => r.v[F.indexOf(f)] / f.sqft); if(!ps.length || !r.v[last] || !F[last].sqft) return ""; const avg = ps.reduce((a,b)=>a+b,0)/ps.length, d = (r.v[last]/F[last].sqft - avg)/avg*100;
     const r0 = Math.round(d); return `<span class="${d > 25 ? "neg" : ""}">${r0 > 0 ? "+" : ""}${r0 === 0 ? 0 : r0}%</span>`; };
   const tot = F.map((f,k) => sum(ord, key => rows[key].v[k]));
-  return `<div class="spread"><p class="note" style="margin:0">${per ? "LKR per sellable sq.ft" : "LKR"} · ${F.map(f => `${esc(f.name)} ${fm(f.sqft)} sq.ft`).join(" · ")}</p>${subSeg("bper", per ? "sqft" : "lkr", [["lkr","LKR"],["sqft","Per sq.ft"]])}</div>
+  return `<div class="spread"><p class="note" style="margin:0">${act ? "Actual cost to date" : "Budget (forecast final cost)"} · ${per ? "LKR per sellable sq.ft" : "LKR"} · ${F.map(f => `${esc(f.name)} ${fm(f.sqft)} sq.ft`).join(" · ")}</p><div class="row">${subSeg("bwhat", act ? "actual" : "budget", [["budget","Budget"],["actual","Actual to date"]])}${subSeg("bper", per ? "sqft" : "lkr", [["lkr","LKR"],["sqft","Per sq.ft"]])}</div></div>
   <div class="card" style="padding:0"><div class="scroll"><table class="qt bt"><thead><tr><th>Cost line</th>${F.map(f => `<th>${esc(f.name)}</th>`).join("")}<th title="${esc(F[last].name)} per sq.ft against the average of the others">vs others /sq.ft</th></tr></thead><tbody>
     ${groups.map(G => `<tr class="tot"><td>${esc(G.g)}</td>${F.map((f,k) => `<td>${val(sum(G.keys, key => rows[key].v[k]), f)}</td>`).join("")}<td></td></tr>
       ${G.keys.map(key => { const r = rows[key]; return `<tr><td>${r.line ? r.line + " · " : ""}${esc(r.item)}</td>${F.map((f,k) => `<td>${val(r.v[k], f)}</td>`).join("")}<td>${chg(r)}</td></tr>`; }).join("")}`).join("")}
@@ -1642,7 +1647,7 @@ function budgetProject(f){
     <div class="eyebrow">${esc(f.name)} · cost budget</div><div class="big">LKR ${fm(f.budget)}</div>
     <div class="meta">${f.sqft ? `LKR ${fm(f.budget/f.sqft)} per sellable sq.ft (${fm(f.sqft)} sq.ft) · ` : ""}${f.heads} cost heads · forecast profit ${fmM(f.profit)} (${f.margin.toFixed(1)}%)</div></section>
   <section class="kpis">
-    <div class="kpi"><div class="eyebrow">Spent to date</div><div class="v">${fmM(f.spent)}</div><div class="s">${f.used.toFixed(0)}% of budget${f.s.costFromProject ? " · project total" : ""}</div></div>
+    <div class="kpi"><div class="eyebrow">Spent to date</div><div class="v">${fmM(f.spent)}</div><div class="s">${f.used.toFixed(0)}% of budget${f.s.costFromProject ? " · project total" : ""}${(f.lines.find(c => c.actualAsOf) || {}).actualAsOf ? " · to " + fdate(f.lines.find(c => c.actualAsOf).actualAsOf) : ""}</div></div>
     <div class="kpi"><div class="eyebrow">To complete</div><div class="v">${fmM(f.toComplete)}</div><div class="s">forecast final ${fmM(f.eac)}</div></div>
     <div class="kpi"><div class="eyebrow">Sales value</div><div class="v">${fmM(f.sales)}</div><div class="s">${f.units ? `${f.sold} of ${f.units} units sold` : ""}</div></div>
     <div class="kpi"><div class="eyebrow">Collected</div><div class="v">${fmM(f.collected)}</div><div class="s">from buyers</div></div>
@@ -2277,6 +2282,7 @@ document.addEventListener("click", e => {
   if(d.csub){ ui.cSub = d.csub; ui.proj = null; render(); window.scrollTo(0,0); return; }
   if(d.bsub){ ui.bSub = d.bsub; render(); return; }
   if(d.bper){ ui.bPer = d.bper; render(); return; }
+  if(d.bwhat){ ui.bWhat = d.bwhat; render(); return; }
   if(d.cm){ ui.cm = d.cm === "-" ? null : d.cm; render(); window.scrollTo(0,0); return; }
   if(d.ck){ toggleCheck(d.ck); return; }
   if(d.q){ toggleQuery(d.q); return; }
