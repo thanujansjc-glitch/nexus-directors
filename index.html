@@ -2007,13 +2007,10 @@ function go(v, f){
   ls.set("nx-view", v); render(); window.scrollTo(0,0);
 }
 
-/* ---------- keep the header, bottom tabs and forms on screen when the Claude app scrolls the page from outside ---------- */
+/* ---------- keep the bottom tabs and forms on screen when the page is scrolled from outside (Claude phone app) ----------
+   The app watches which part of itself is visible on the device screen (IntersectionObserver against the top-level viewport).
+   If the page is laid out at full length (no scrolling of its own) and only part of it is visible, the tabs are placed by script. */
 const HOST = { on:false, top:0, bottom:0, strips:null, io:null, vis:new Map() };
-function hostDetect(){
-  const de = document.documentElement, vh = window.innerHeight, scr = (window.screen && window.screen.height) || 0;
-  // the page is laid out at its full length (no inner scroll) and is taller than the phone screen
-  return scr > 0 && vh > scr + 40 && de.scrollHeight <= vh + 4;
-}
 function hostPlace(){
   if(!HOST.on) return;
   const top = HOST.top, bot = HOST.bottom || window.innerHeight, h = Math.max(0, bot - top);
@@ -2023,30 +2020,38 @@ function hostPlace(){
   const sb = $("#sheetbg"); if(sb){ sb.style.top = top + "px"; sb.style.height = h + "px"; }
   const t = document.querySelector(".toast"); if(t) t.style.top = (bot - 140) + "px";
 }
+function hostSet(on){
+  if(on === HOST.on) return;
+  HOST.on = on; document.documentElement.classList.toggle("nx-host", on);
+  if(!on) document.querySelectorAll("nav.tabs, #fab, #sheetbg, .toast").forEach(el => { el.style.top = ""; el.style.height = ""; });
+}
+function hostEval(){
+  let t = Infinity, b = -Infinity; HOST.vis.forEach(r => { t = Math.min(t, r.top); b = Math.max(b, r.bottom); });
+  if(!isFinite(t)) return;
+  const vh = window.innerHeight, de = document.documentElement;
+  const ownScroll = de.scrollHeight > vh + 4 && (window.scrollY > 0 || de.scrollHeight - vh > 40);
+  const clipped = (b < vh - 24) || (t > 24);
+  HOST.top = Math.max(0, t); HOST.bottom = b;
+  hostSet(clipped && !ownScroll);
+  hostPlace();
+}
 function hostStrips(){
-  if(!HOST.on) return;
-  const H = document.documentElement.scrollHeight, n = Math.ceil(H / 40) + 2;
+  const H = Math.max(document.documentElement.scrollHeight, window.innerHeight), n = Math.ceil(H / 40) + 2;
   if(!HOST.strips){ HOST.strips = document.createElement("div"); HOST.strips.className = "nx-strips"; HOST.strips.setAttribute("aria-hidden","true"); document.body.appendChild(HOST.strips); }
   if(HOST.strips.children.length === n) return;
   if(HOST.io) HOST.io.disconnect(); HOST.vis.clear();
   HOST.strips.innerHTML = "<i></i>".repeat(n);
   HOST.io = new IntersectionObserver(es => {
     es.forEach(e => { if(e.isIntersecting && e.intersectionRect.height > 0) HOST.vis.set(e.target, e.intersectionRect); else HOST.vis.delete(e.target); });
-    let t = Infinity, b = -Infinity; HOST.vis.forEach(r => { t = Math.min(t, r.top); b = Math.max(b, r.bottom); });
-    if(isFinite(t)){ HOST.top = Math.max(0, t); HOST.bottom = b; hostPlace(); }
+    hostEval();
   }, { threshold: [0, .1, .2, .3, .4, .5, .6, .7, .8, .9, 1] });
   [...HOST.strips.children].forEach(el => HOST.io.observe(el));
 }
-function hostCheck(){
-  const on = hostDetect();
-  if(on !== HOST.on){ HOST.on = on; document.documentElement.classList.toggle("nx-host", on);
-    if(!on){ document.querySelectorAll("nav.tabs, #fab").forEach(el => el.style.top = ""); if(HOST.io) HOST.io.disconnect(); if(HOST.strips){ HOST.strips.remove(); HOST.strips = null; } } }
-  if(on){ hostStrips(); hostPlace(); }
-}
 if("IntersectionObserver" in window){
-  window.addEventListener("resize", hostCheck);
-  new MutationObserver(() => { if(HOST.on){ hostStrips(); hostPlace(); } }).observe(document.body, { childList:true, subtree:true });
-  setTimeout(hostCheck, 300); setTimeout(hostCheck, 1500);
+  const kick = () => { hostStrips(); hostEval(); };
+  window.addEventListener("resize", kick);
+  let mo = 0; new MutationObserver(m => { if(m.every(x => x.target === HOST.strips)) return; clearTimeout(mo); mo = setTimeout(() => { hostStrips(); hostPlace(); }, 30); }).observe(document.body, { childList:true, subtree:true });
+  setTimeout(kick, 200); setTimeout(kick, 1200); setTimeout(kick, 3000);
 }
 
 function toast(msg){ const r = $("#toastroot"); r.innerHTML = `<div class="toast" role="status">${esc(msg)}</div>`; clearTimeout(toast.t); toast.t = setTimeout(()=>{ r.innerHTML=""; }, 2600); }
