@@ -26,6 +26,7 @@ html,body{margin:0;background:#1f242b;color:#f4f6f8}
 #nxbar div{pointer-events:auto;background:#2b323b;color:#9aa3ad;font:12.5px "Segoe UI",system-ui,sans-serif;border-radius:999px;padding:5px 12px;margin-bottom:8px;box-shadow:0 2px 8px rgba(0,0,0,.3)}
 #nxbar button{background:none;border:0;color:#3fb950;font:inherit;font-weight:600;cursor:pointer;padding:0 0 0 8px}
 #nxbar .sep{color:#4a535e;padding-left:8px}
+@media (max-width:480px){#nxbar .lbl{display:none}}
 /* Full screen: use the whole width of a computer screen */
 html.nx-wide main,html.nx-wide .top-in,html.nx-wide nav.tabs .in{max-width:min(1600px,100%)}
 html.nx-wide main{padding-inline:clamp(16px,3vw,40px);gap:22px}
@@ -83,7 +84,7 @@ html.nx-mobile .ugrid{grid-template-columns:repeat(2,minmax(0,1fr))}
   function setLayout(v){ store.set("nx-dir-layout", v); layout(); drawBar(); window.dispatchEvent(new Event("resize")); }
   let barD = null;
   function drawBar(){ if(!barD) return; const v = layout(), bar = document.getElementById("nxbar");
-    bar.innerHTML = `<div>Directors' view · figures as at ${asAt(barD)}<span class="sep">|</span><button type="button" id="nxlay">${v === "wide" ? "Mobile view" : "Full screen"}</button><span class="sep">|</span><button type="button" id="nxout">Lock</button></div>`; bar.hidden = false;
+    bar.innerHTML = `<div><span class="lbl">Directors' view · </span>figures as at ${asAt(barD)}<span class="sep">|</span><button type="button" id="nxlay">${v === "wide" ? "Mobile view" : "Full screen"}</button><span class="sep">|</span><button type="button" id="nxout">Lock</button></div>`; bar.hidden = false;
     document.getElementById("nxout").onclick = lock; document.getElementById("nxlay").onclick = () => setLayout(v === "wide" ? "mobile" : "wide"); }
   layout();
   function lock(){ store.del("nx-dir-pw"); location.reload(); }
@@ -215,6 +216,10 @@ button.kpi{display:block;width:100%}
 .auto{font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-left:4px}
 [hidden]{display:none!important}
 .scroll{overflow-x:auto}
+.bbar{position:relative;display:flex;height:14px;border-radius:7px;background:var(--surface-2);overflow:visible}
+.bbar span{height:100%}.bbar span:first-child{border-radius:7px 0 0 7px}
+.bbar i{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--fg);border-radius:1px}
+.bt td{text-align:right;white-space:nowrap}.bt td:first-child{text-align:left;white-space:normal}.bt th{text-align:right}.bt th:first-child{text-align:left}
 table{border-collapse:collapse;width:100%;font-size:13px}
 th,td{padding:8px 10px;text-align:right;border-top:1px solid var(--line);white-space:nowrap}
 th:first-child,td:first-child{text-align:left}
@@ -477,7 +482,8 @@ const S = {
     {k:"head",l:"Cost head",t:"select",o:["Land","Construction","Consultants","Approvals & fees","Admin","Marketing","Finance cost","Other"],full:1},
     {k:"budget",l:"Budget (LKR)",t:"num"},
     {k:"actual",l:"Spent to date (LKR)",t:"num"},
-    {k:"committed",l:"Committed, not yet spent",t:"num",full:1},
+    {k:"committed",l:"Committed, not yet spent",t:"num"},
+    {k:"forecast",l:"Forecast final cost (LKR)",t:"num",hint:"Expected total at completion. Leave blank to assume the budget holds."},
     {k:"note",l:"Basis / notes",t:"area",full:1}]}
 };
 const COLS = Object.keys(S);
@@ -749,7 +755,7 @@ const TABS = [
 function fabFor(){
   if(ui.view === "cash") return ["banks","Bank balance"];
   if(ui.view === "recv") return ui.sSub === "units" ? ["units","Unit"] : ui.sSub === "b65" ? ["book65","Booking"] : ["recv","Instalment"];
-  if(ui.view === "pay") return ui.cSub === "budget" ? (ui.proj ? ["costs","Cost line"] : ["projects","Project"]) : ["pay","Supplier bill"];
+  if(ui.view === "pay") return ui.cSub === "analysis" ? null : ui.cSub === "budget" ? (ui.proj ? ["costs","Cost line"] : ["projects","Project"]) : ["pay","Supplier bill"];
   if(ui.view === "tax") return ui.tSub === "vat" ? null : ["tax","Deadline"];
   if(ui.view === "reports"){
     if(ui.rep === "proj") return ui.proj ? ["costs","Cost line"] : ["projects","Project"];
@@ -1579,9 +1585,100 @@ function viewB65(){
       : `<div class="list"><div class="empty">No enquiries yet.</div></div>`}
   </section>`;
 }
+
+/* ---------- budget analysis: the projects side by side ---------- */
+const BHEADS = ["Land","Construction","Consultants","Approvals & fees","Admin","Marketing","Finance cost","Other"];
+const eac = c => N(c.forecast) || Math.max(N(c.budget), N(c.actual) + N(c.committed));
+function budgetFigures(p){
+  const s = projStats(p), lines = D.costs.filter(c => c.project === p.name), us = D.units.filter(u => u.project === p.name);
+  const f = { name:p.name, p, s, lines, heads: lines.length };
+  f.budget = s.budget; f.spent = s.cost; f.committed = s.committed || 0;
+  f.eac = lines.length ? sum(lines, eac) : Math.max(N(p.forecastCost) || s.budget, s.cost);
+  f.var = f.budget - f.eac;                                   // + under budget, − over
+  f.used = f.budget ? (f.spent + f.committed) / f.budget * 100 : 0;
+  f.toComplete = Math.max(0, f.eac - f.spent - f.committed);
+  f.sales = (s.salesValue + (s.stock || 0)) || N(p.salesValue);
+  f.soldValue = s.salesValue || 0;
+  f.sqft = sum(us, u => N(u.sqft)) || N(p.sqft);
+  f.profit = f.sales - f.eac; f.margin = f.sales ? f.profit / f.sales * 100 : 0;
+  f.perSqft = f.sqft ? f.eac / f.sqft : 0;
+  f.collected = s.collected; f.loanOut = s.loanOut || 0;
+  f.units = s.units; f.sold = s.sold;
+  return f;
+}
+function viewBudget(){
+  if(notReady("projects") || notReady("costs")) return loadingList();
+  const order = ["26B Nelson","29 St Lawrence","65 St Lawrence"];
+  const P = D.projects.slice().sort((a,b) => (order.indexOf(a.name)+99*(order.indexOf(a.name)<0)) - (order.indexOf(b.name)+99*(order.indexOf(b.name)<0)));
+  if(!P.length) return emptyState("No projects yet.","projects");
+  const F = P.map(budgetFigures);
+  const T_ = k => sum(F, f => f[k]);
+  const tb = T_("budget"), te = T_("eac"), ts = T_("spent"), tc = T_("committed");
+  const vchip = v => Math.abs(v) < 1 ? chip("On budget","good") : v > 0 ? chip("Under " + fmM(v),"good") : chip("Over " + fmM(-v),"bad");
+  const row = (label, fn, cls) => `<tr${cls?` class="${cls}"`:""}><td>${label}</td>${F.map(f => `<td>${fn(f)}</td>`).join("")}</tr>`;
+  const pctTxt = v => isFinite(v) && v ? v.toFixed(1) + "%" : "–";
+  // flags
+  const flags = [];
+  F.forEach(f => {
+    if(f.var < -1) flags.push(["bad", `${f.name}: forecast ${fmM(f.eac)} is ${fmM(-f.var)} over the budget of ${fmM(f.budget)}`]);
+    f.lines.forEach(c => { const u = N(c.budget) ? (N(c.actual)+N(c.committed))/N(c.budget)*100 : 0;
+      if(N(c.actual)+N(c.committed) > N(c.budget) + 1) flags.push(["bad", `${f.name} · ${c.head}: spent and committed ${fmM(N(c.actual)+N(c.committed))} exceeds the budget of ${fmM(N(c.budget))}`]);
+      else if(u > 90) flags.push(["warn", `${f.name} · ${c.head}: ${u.toFixed(0)}% of budget used`]); });
+    if(!f.heads) flags.push(["info", `${f.name}: budget held as one total only. Load the cost report by cost head (land, construction, consultants…) to analyse it line by line.`]);
+    if(f.margin && f.margin < 15) flags.push(["warn", `${f.name}: forecast margin ${f.margin.toFixed(1)}%`]);
+  });
+  const ico = { bad:"var(--bad)", warn:"var(--warn)", info:"var(--muted)" };
+  const bar = f => { const w = Math.max(f.budget, f.eac, 1), sp = f.spent/w*100, cm = f.committed/w*100, rest = Math.max(0, f.eac - f.spent - f.committed)/w*100, bm = f.budget/w*100;
+    return `<div class="bbar" role="img" aria-label="${esc(f.name)}: spent ${fmM(f.spent)}, committed ${fmM(f.committed)}, to complete ${fmM(f.toComplete)}, budget ${fmM(f.budget)}">
+      <span style="width:${sp}%;background:var(--good)"></span><span style="width:${cm}%;background:var(--warn)"></span><span style="width:${rest}%;background:var(--surface-2);outline:1px dashed var(--muted);outline-offset:-1px"></span>
+      <i style="left:${bm}%" title="Budget"></i></div>`; };
+  // head matrix
+  const heads = BHEADS.filter(h => F.some(f => f.lines.some(c => c.head === h)));
+  const cell = (f, h) => { const c = f.lines.filter(x => x.head === h); if(!c.length) return `<span class="note">–</span>`;
+    const b = sum(c, x=>N(x.budget)), a = sum(c, x=>N(x.actual)+N(x.committed)), e = sum(c, eac), u = b ? a/b*100 : 0;
+    return `${fmM(b)}<div class="note">${fmM(a)} used · ${u.toFixed(0)}%${Math.abs(b-e) >= 1 ? ` · ${b-e<0?"over":"under"} ${fmM(Math.abs(b-e))}` : ""}</div>`; };
+  return `
+  <section class="kpis">
+    <div class="kpi"><div class="eyebrow">Total cost budget</div><div class="v">${fmM(tb)}</div><div class="s">${F.length} projects</div></div>
+    <div class="kpi"><div class="eyebrow">Spent + committed</div><div class="v">${fmM(ts+tc)}</div><div class="s">${tb ? ((ts+tc)/tb*100).toFixed(0) : 0}% of budget</div></div>
+    <div class="kpi"><div class="eyebrow">Forecast final cost</div><div class="v">${fmM(te)}</div><div class="s">${fmM(Math.max(0,te-ts-tc))} still to spend</div></div>
+    <div class="kpi"><div class="eyebrow">Forecast vs budget</div><div class="v" style="color:${tb-te<-1?"var(--bad)":"var(--good)"}">${Math.abs(tb-te)<1?"On budget":(tb-te<0?"−":"+")+fmM(Math.abs(tb-te))}</div><div class="s">${tb-te<-1?"over budget":Math.abs(tb-te)<1?"no overrun forecast":"under budget"}</div></div>
+  </section>
+  <section class="card stack"><div class="spread"><h3>Cost progress</h3><div class="chart-legend"><span><i style="background:var(--good)"></i>Spent</span><span><i style="background:var(--warn)"></i>Committed</span><span><i style="background:var(--surface-2);outline:1px dashed var(--muted)"></i>To complete</span><span><i class="ln" style="background:var(--fg)"></i>Budget</span></div></div>
+    ${F.map(f => `<div class="stack" style="gap:4px"><div class="spread"><b>${esc(f.name)}</b><span>${vchip(f.var)}</span></div>${bar(f)}<div class="note">${fmM(f.spent)} spent${f.committed?` · ${fmM(f.committed)} committed`:""} · ${fmM(f.toComplete)} to complete · budget ${fmM(f.budget)} · ${f.used.toFixed(0)}% used</div></div>`).join("")}
+  </section>
+  <section class="stack"><h3>Project comparison</h3><div class="card" style="padding:0"><div class="scroll"><table class="qt bt"><thead><tr><th>LKR</th>${F.map(f => `<th>${esc(f.name)}</th>`).join("")}</tr></thead><tbody>
+    ${row("Sales value (sold + unsold at list price)", f => fmM(f.sales))}
+    ${row("Units sold", f => f.units ? `${f.sold} / ${f.units}` : "–")}
+    ${row("Cost budget", f => fmM(f.budget), "tot")}
+    ${row("Spent to date", f => fmM(f.spent))}
+    ${row("Committed", f => fmM(f.committed))}
+    ${row("To complete", f => fmM(f.toComplete))}
+    ${row("Forecast final cost", f => fmM(f.eac), "tot")}
+    ${row("Variance to budget", f => `<span class="${f.var<-1?"neg":""}">${f.var<-1?"(":""}${fmM(Math.abs(f.var))}${f.var<-1?")":""}</span>`)}
+    ${row("% of budget used", f => pctTxt(f.used))}
+    ${row("Forecast profit", f => `<span class="${f.profit<0?"neg":""}">${fmM(f.profit)}</span>`, "tot")}
+    ${row("Margin on sales", f => pctTxt(f.margin))}
+    ${row("Cost per sellable sq.ft (LKR)", f => f.perSqft ? fm(f.perSqft) : "–")}
+    ${row("Sales per sq.ft (LKR)", f => f.sqft && f.sales ? fm(f.sales / f.sqft) : "–")}
+    ${row("Collected from buyers", f => fmM(f.collected))}
+    ${row("Bank loan outstanding", f => fmM(f.loanOut))}
+    ${row("Cost detail", f => f.heads ? `${f.heads} cost heads` : `<span class="note">total only</span>`)}
+  </tbody></table></div></div>
+  <p class="note" style="margin:0">Forecast final cost = each line's forecast if entered, otherwise the larger of its budget and spent + committed. Profit is before tax. Bracketed variance = over budget.</p></section>
+  ${heads.length ? `<section class="stack"><h3>By cost head</h3><div class="card" style="padding:0"><div class="scroll"><table class="qt bt"><thead><tr><th>Budget · used</th>${F.map(f => `<th>${esc(f.name)}</th>`).join("")}</tr></thead><tbody>
+    ${heads.map(h => `<tr><td>${esc(h)}</td>${F.map(f => `<td>${cell(f,h)}</td>`).join("")}</tr>`).join("")}
+  </tbody></table></div></div></section>` : ""}
+  <section class="stack"><div class="spread"><h3>Points to watch</h3>${flags.filter(x=>x[0]==="bad").length ? chip(flags.filter(x=>x[0]==="bad").length + " over budget","bad") : chip("Nothing over budget","good")}</div>
+    ${flags.length ? `<div class="list">${flags.map(x => `<div class="item" style="cursor:default;border-left:3px solid ${ico[x[0]]}"><div><div class="d" style="color:var(--fg)">${esc(x[1])}</div></div></div>`).join("")}</div>` : ""}
+  </section>
+  <p class="note">Cost lines are kept under Costs → Cost budgets: open a project to add or update a line (budget, spent, committed and forecast final cost).</p>`;
+}
+
 function viewCosts(){
-  const sub = ui.cSub === "budget" ? "budget" : "pay";
-  const seg = subSeg("csub", sub, [["pay","Supplier bills"],["budget","Cost budgets"]]);
+  const sub = ["budget","analysis"].includes(ui.cSub) ? ui.cSub : "pay";
+  const seg = subSeg("csub", sub, [["pay","Supplier bills"],["budget","Cost budgets"],["analysis","Budget analysis"]]);
+  if(sub === "analysis") return `${exampleBanner()}<h2>Budget analysis</h2>${seg}${viewBudget()}`;
   return sub === "budget" ? `${exampleBanner()}<h2>Cost budgets</h2>${seg}${repProj()}` : seg + viewPay();
 }
 

@@ -26,6 +26,7 @@ html,body{margin:0;background:#1f242b;color:#f4f6f8}
 #nxbar div{pointer-events:auto;background:#2b323b;color:#9aa3ad;font:12.5px "Segoe UI",system-ui,sans-serif;border-radius:999px;padding:5px 12px;margin-bottom:8px;box-shadow:0 2px 8px rgba(0,0,0,.3)}
 #nxbar button{background:none;border:0;color:#3fb950;font:inherit;font-weight:600;cursor:pointer;padding:0 0 0 8px}
 #nxbar .sep{color:#4a535e;padding-left:8px}
+@media (max-width:480px){#nxbar .lbl{display:none}}
 /* Full screen: use the whole width of a computer screen */
 html.nx-wide main,html.nx-wide .top-in,html.nx-wide nav.tabs .in{max-width:min(1600px,100%)}
 html.nx-wide main{padding-inline:clamp(16px,3vw,40px);gap:22px}
@@ -83,7 +84,7 @@ html.nx-mobile .ugrid{grid-template-columns:repeat(2,minmax(0,1fr))}
   function setLayout(v){ store.set("nx-dir-layout", v); layout(); drawBar(); window.dispatchEvent(new Event("resize")); }
   let barD = null;
   function drawBar(){ if(!barD) return; const v = layout(), bar = document.getElementById("nxbar");
-    bar.innerHTML = `<div>Directors' view · figures as at ${asAt(barD)}<span class="sep">|</span><button type="button" id="nxlay">${v === "wide" ? "Mobile view" : "Full screen"}</button><span class="sep">|</span><button type="button" id="nxout">Lock</button></div>`; bar.hidden = false;
+    bar.innerHTML = `<div><span class="lbl">Directors' view · </span>figures as at ${asAt(barD)}<span class="sep">|</span><button type="button" id="nxlay">${v === "wide" ? "Mobile view" : "Full screen"}</button><span class="sep">|</span><button type="button" id="nxout">Lock</button></div>`; bar.hidden = false;
     document.getElementById("nxout").onclick = lock; document.getElementById("nxlay").onclick = () => setLayout(v === "wide" ? "mobile" : "wide"); }
   layout();
   function lock(){ store.del("nx-dir-pw"); location.reload(); }
