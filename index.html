@@ -300,6 +300,25 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
 .ok{color:var(--good);font-size:13px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(140px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:9px 16px;border-radius:99px;font-size:14px;font-weight:600;z-index:30;max-width:calc(100% - 32px);text-align:center}
 @media (prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(24px);opacity:.6}}}
+/* Full screen: use the whole width of a computer screen; Mobile view: a phone-width column */
+html.nx-wide main,html.nx-wide .top-in,html.nx-wide nav.tabs .in{max-width:min(1600px,100%)}
+html.nx-wide main{padding-inline:clamp(16px,3vw,40px);gap:22px}
+html.nx-wide .top-in{padding-inline:clamp(16px,3vw,40px)}
+html.nx-wide .hero .big{font-size:clamp(30px,3vw,44px)}
+html.nx-wide .kpis .v{font-size:clamp(20px,1.8vw,28px)}
+@media (min-width:1100px){
+  html.nx-wide .ugrid{grid-template-columns:repeat(6,minmax(0,1fr))}
+  html.nx-wide .g65{max-width:900px}
+  html.nx-wide .list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  html.nx-wide .list>*{border-right:1px solid var(--line)}
+  html.nx-wide .qt td:first-child,html.nx-wide .qt th:first-child{max-width:340px}
+  html.nx-wide .sheet-bg{align-items:center}
+}
+@media (min-width:1500px){html.nx-wide .list{grid-template-columns:repeat(3,minmax(0,1fr))}}
+html.nx-mobile main,html.nx-mobile .top-in,html.nx-mobile nav.tabs .in{max-width:440px}
+html.nx-mobile .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+html.nx-mobile .ugrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+#laybtn svg{width:20px;height:20px}
 </style>
 
 <header class="top"><div class="top-in">
@@ -307,6 +326,7 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
   <div><h1>Nexus Finance Desk</h1><div class="sub">Nexus Property Developers (Pvt) Ltd · LKR</div></div>
   <div class="tools">
     <div class="sync" id="sync"><span class="dot" id="syncdot"></span><span id="synctxt">Connecting…</span></div>
+    <button class="iconbtn" type="button" id="laybtn" data-act="layout" hidden></button>
     <button class="iconbtn" type="button" data-act="data" aria-label="Import and export with Excel" title="Import / export Excel"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 17v3h16v-3"/></svg></button>
   </div>
 </div></header>
@@ -340,6 +360,19 @@ const fm = n => (n < 0 ? "−" : "") + Math.abs(Math.round(n)).toLocaleString("e
 const fmM = n => { const a = Math.abs(n); const s = a >= 1e9 ? (a/1e9).toFixed(2)+"bn" : a >= 1e6 ? (a/1e6).toFixed(1)+"m" : a >= 1e3 ? Math.round(a/1e3)+"k" : String(Math.round(a)); return (n < 0 ? "−" : "") + s; };
 const pct = (a,b) => b ? Math.max(0, Math.min(100, a/b*100)) : 0;
 const ls = { get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch(e){} } };
+/* screen layout: full screen on wide screens, phone column otherwise; the directors' page sets its own */
+const LAY_FULL = '<svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>', LAY_MOB = '<svg viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 18h2"/></svg>';
+const layoutOwnedByPage = () => !!document.getElementById("nxbar");
+function applyLayout(){
+  if(layoutOwnedByPage()) return;
+  const v = ls.get("nx-layout") || (window.innerWidth >= 900 ? "wide" : "mobile"), h = document.documentElement;
+  h.classList.toggle("nx-wide", v === "wide"); h.classList.toggle("nx-mobile", v === "mobile");
+  const b = document.getElementById("laybtn"); if(!b) return;
+  b.hidden = window.innerWidth < 700;   // phones are always phone width
+  b.innerHTML = v === "wide" ? LAY_MOB : LAY_FULL;
+  b.title = v === "wide" ? "Mobile view" : "Full screen"; b.setAttribute("aria-label", b.title);
+}
+applyLayout(); window.addEventListener("resize", () => { if(!ls.get("nx-layout")) applyLayout(); else { const b = document.getElementById("laybtn"); if(b && !layoutOwnedByPage()) b.hidden = window.innerWidth < 700; } });
 const sum = (arr, f) => arr.reduce((s,x) => s + f(x), 0);
 
 /* ---------- 65 St Lawrence apartments (architect's draft plan) ---------- */
@@ -2318,6 +2351,7 @@ document.addEventListener("click", e => {
     case "exno": render(); return;
     case "data": openData(); return;
     case "importnow": importNow(); return;
+    case "layout": ls.set("nx-layout", document.documentElement.classList.contains("nx-wide") ? "mobile" : "wide"); applyLayout(); render(); return;
     case "vatm": ui.vatM = t.dataset.m; ui.vatPaste.msg = ""; render(); return;
     case "vatpopen": ui.vatPaste.open = true; ui.vatPaste.msg = ""; render(); setTimeout(() => { const a = $("#vatpaste"); if(a) a.focus(); }, 30); return;
     case "vatpclose": ui.vatPaste = { kind: ui.vatPaste.kind, text:"", open:false, msg:"" }; render(); return;
