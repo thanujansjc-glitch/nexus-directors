@@ -319,6 +319,16 @@ html.nx-mobile main,html.nx-mobile .top-in,html.nx-mobile nav.tabs .in{max-width
 html.nx-mobile .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
 html.nx-mobile .ugrid{grid-template-columns:repeat(2,minmax(0,1fr))}
 #laybtn svg{width:20px;height:20px}
+/* Inside the Claude phone app the page is shown at full length and scrolled from outside, so "fixed" bars are placed by script (html.nx-host) */
+html.nx-host nav.tabs,html.nx-host .fab,html.nx-host .sheet-bg,html.nx-host .toast{position:absolute}
+html.nx-host .top{position:relative;top:0}
+html.nx-host nav.tabs{bottom:auto;top:0}
+html.nx-host .fab{bottom:auto}
+html.nx-host .sheet-bg{inset:auto;left:0;right:0;top:0;height:100vh}
+html.nx-host .toast{bottom:auto}
+.nx-strips{position:absolute;left:0;top:0;width:1px;pointer-events:none;visibility:hidden}
+.nx-strips i{display:block;height:40px}
+@media (max-width:600px){.top .sub{display:none}.top-in{padding-block:8px}.top .mark{width:30px;height:30px;font-size:15px}.top h1{font-size:16px}}
 </style>
 
 <header class="top"><div class="top-in">
@@ -1996,6 +2006,49 @@ function go(v, f){
   if(v === "reports" && ui.rep === "proj"){ /* projects report stays under Reports */ }
   ls.set("nx-view", v); render(); window.scrollTo(0,0);
 }
+
+/* ---------- keep the header, bottom tabs and forms on screen when the Claude app scrolls the page from outside ---------- */
+const HOST = { on:false, top:0, bottom:0, strips:null, io:null, vis:new Map() };
+function hostDetect(){
+  const de = document.documentElement, vh = window.innerHeight, scr = (window.screen && window.screen.height) || 0;
+  // the page is laid out at its full length (no inner scroll) and is taller than the phone screen
+  return scr > 0 && vh > scr + 40 && de.scrollHeight <= vh + 4;
+}
+function hostPlace(){
+  if(!HOST.on) return;
+  const top = HOST.top, bot = HOST.bottom || window.innerHeight, h = Math.max(0, bot - top);
+  const nav = document.querySelector("nav.tabs"), fab = $("#fab");
+  if(nav) nav.style.top = (bot - nav.offsetHeight) + "px";
+  if(fab) fab.style.top = (bot - (nav ? nav.offsetHeight : 58) - 20 - fab.offsetHeight) + "px";
+  const sb = $("#sheetbg"); if(sb){ sb.style.top = top + "px"; sb.style.height = h + "px"; }
+  const t = document.querySelector(".toast"); if(t) t.style.top = (bot - 140) + "px";
+}
+function hostStrips(){
+  if(!HOST.on) return;
+  const H = document.documentElement.scrollHeight, n = Math.ceil(H / 40) + 2;
+  if(!HOST.strips){ HOST.strips = document.createElement("div"); HOST.strips.className = "nx-strips"; HOST.strips.setAttribute("aria-hidden","true"); document.body.appendChild(HOST.strips); }
+  if(HOST.strips.children.length === n) return;
+  if(HOST.io) HOST.io.disconnect(); HOST.vis.clear();
+  HOST.strips.innerHTML = "<i></i>".repeat(n);
+  HOST.io = new IntersectionObserver(es => {
+    es.forEach(e => { if(e.isIntersecting && e.intersectionRect.height > 0) HOST.vis.set(e.target, e.intersectionRect); else HOST.vis.delete(e.target); });
+    let t = Infinity, b = -Infinity; HOST.vis.forEach(r => { t = Math.min(t, r.top); b = Math.max(b, r.bottom); });
+    if(isFinite(t)){ HOST.top = Math.max(0, t); HOST.bottom = b; hostPlace(); }
+  }, { threshold: [0, .1, .2, .3, .4, .5, .6, .7, .8, .9, 1] });
+  [...HOST.strips.children].forEach(el => HOST.io.observe(el));
+}
+function hostCheck(){
+  const on = hostDetect();
+  if(on !== HOST.on){ HOST.on = on; document.documentElement.classList.toggle("nx-host", on);
+    if(!on){ document.querySelectorAll("nav.tabs, #fab").forEach(el => el.style.top = ""); if(HOST.io) HOST.io.disconnect(); if(HOST.strips){ HOST.strips.remove(); HOST.strips = null; } } }
+  if(on){ hostStrips(); hostPlace(); }
+}
+if("IntersectionObserver" in window){
+  window.addEventListener("resize", hostCheck);
+  new MutationObserver(() => { if(HOST.on){ hostStrips(); hostPlace(); } }).observe(document.body, { childList:true, subtree:true });
+  setTimeout(hostCheck, 300); setTimeout(hostCheck, 1500);
+}
+
 function toast(msg){ const r = $("#toastroot"); r.innerHTML = `<div class="toast" role="status">${esc(msg)}</div>`; clearTimeout(toast.t); toast.t = setTimeout(()=>{ r.innerHTML=""; }, 2600); }
 
 /* ---------- writes ---------- */
