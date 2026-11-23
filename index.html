@@ -216,6 +216,7 @@ button.kpi{display:block;width:100%}
 .auto{font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-left:4px}
 [hidden]{display:none!important}
 .scroll{overflow-x:auto}
+.linkbtn{all:unset;cursor:pointer;color:inherit}.linkbtn:hover b,.linkbtn:hover{text-decoration:underline}
 .bbar{position:relative;display:flex;height:14px;border-radius:7px;background:var(--surface-2);overflow:visible}
 .bbar span{height:100%}.bbar span:first-child{border-radius:7px 0 0 7px}
 .bbar i{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--fg);border-radius:1px}
@@ -1586,9 +1587,27 @@ function viewB65(){
   </section>`;
 }
 
-/* ---------- budget analysis: the projects side by side ---------- */
+/* ---------- budget analysis: one basis for the overview, the project tabs and the line comparison ---------- */
 const BHEADS = ["Land","Construction","Consultants","Approvals & fees","Admin","Marketing","Finance cost","Other"];
-const eac = c => N(c.forecast) || Math.max(N(c.budget), N(c.actual) + N(c.committed));
+const BGROUPS = ["Land & acquisition","Pre-construction & statutory","Utilities & services","Finance & overheads","Labour & subcontract works","Construction materials","Fittings & equipment","Other"];
+const HEAD2GROUP = { "Land":"Land & acquisition", "Approvals & fees":"Pre-construction & statutory", "Consultants":"Pre-construction & statutory", "Admin":"Finance & overheads", "Marketing":"Finance & overheads", "Finance cost":"Finance & overheads", "Construction":"Other", "Other":"Other" };
+const hasItems = c => Array.isArray(c.items) && c.items.length;
+/* forecast final: per estimate line, the larger of budget and actual (an overrun on one line is not offset by another); a line entered by hand uses its own forecast */
+const itemEac = i => Math.max(N(i.amount), N(i.actual));
+const eac = c => N(c.forecast) || (hasItems(c) ? sum(c.items, itemEac) + N(c.committed) : Math.max(N(c.budget), N(c.actual) + N(c.committed)));
+/* every cost of a project as estimate lines (a cost line without items counts as one line in its head's group) */
+function budgetItems(f){
+  const out = [];
+  f.lines.forEach(c => { if(hasItems(c)) c.items.forEach(i => out.push({ line:i.line, item:i.item, group:i.group || HEAD2GROUP[c.head] || "Other", budget:N(i.amount), actual:N(i.actual), ledger:i.ledger, eac:itemEac(i) }));
+    else out.push({ line:0, item:c.head, group:HEAD2GROUP[c.head] || "Other", budget:N(c.budget), actual:N(c.actual), eac:eac(c) }); });
+  return out;
+}
+function budgetGroups(f){
+  const G = BGROUPS.map(g => ({ g, budget:0, actual:0, eac:0, items:[] }));
+  budgetItems(f).forEach(i => { let x = G.find(y => y.g === i.group); if(!x){ x = { g:i.group, budget:0, actual:0, eac:0, items:[] }; G.push(x); } x.budget += i.budget; x.actual += i.actual; x.eac += i.eac; x.items.push(i); });
+  G.forEach(x => x.items.sort((a,b) => (a.line||999) - (b.line||999)));
+  return G.filter(x => x.items.length);
+}
 function budgetFigures(p){
   const s = projStats(p), lines = D.costs.filter(c => c.project === p.name), us = D.units.filter(u => u.project === p.name);
   const f = { name:p.name, p, s, lines, heads: lines.length };
@@ -1598,67 +1617,72 @@ function budgetFigures(p){
   f.used = f.budget ? (f.spent + f.committed) / f.budget * 100 : 0;
   f.toComplete = Math.max(0, f.eac - f.spent - f.committed);
   f.sales = (s.salesValue + (s.stock || 0)) || N(p.salesValue);
-  f.soldValue = s.salesValue || 0;
   f.sqft = N(p.sqft) || sum(us, u => N(u.sqft));
   f.profit = f.sales - f.eac; f.margin = f.sales ? f.profit / f.sales * 100 : 0;
   f.perSqft = f.sqft ? f.eac / f.sqft : 0;
   f.collected = s.collected; f.loanOut = s.loanOut || 0;
   f.units = s.units; f.sold = s.sold;
+  f.asOf = (lines.find(c => c.actualAsOf) || {}).actualAsOf || "";
+  f.groups = lines.length ? budgetGroups(f) : [];
+  f.overLines = budgetItems(f).filter(i => i.actual > i.budget + 1).sort((a,b) => (b.actual - b.budget) - (a.actual - a.budget));
   return f;
 }
-function budgetLines(f){ const L = f.lines.filter(c => Array.isArray(c.items) && c.items.length).sort((a,b) => N(b.budget) - N(a.budget)), tot = sum(f.lines, c => N(c.budget));
-  const hasAct = L.some(c => c.items.some(i => i.actual != null)), asOf = (L.find(c => c.actualAsOf) || {}).actualAsOf;
-  const usedChip = (a, b) => { if(!b) return a ? chip("no budget","bad") : ""; const u = a / b * 100; return u > 100.5 ? chip(u.toFixed(0) + "%","bad") : u > 90 ? chip(u.toFixed(0) + "%","warn") : `<span class="note">${u.toFixed(0)}%</span>`; };
+const usedChip = (a, b) => { if(!b) return a ? chip("no budget","bad") : `<span class="note">–</span>`; const u = a / b * 100; return u > 100.5 ? chip(u.toFixed(0) + "%","bad") : u > 90 ? chip(u.toFixed(0) + "%","warn") : `<span class="note">${u.toFixed(0)}%</span>`; };
+const varTxt = v => Math.abs(v) < 1 ? "–" : v < 0 ? `<span class="neg">(${fm(-v)})</span>` : fm(v);
+const vchip = v => Math.abs(v) < 1 ? chip("On budget","good") : v > 0 ? chip("Under " + fmM(v),"good") : chip("Over " + fmM(-v),"bad");
+function budgetBar(f){ const w = Math.max(f.budget, f.eac, 1), sp = f.spent/w*100, cm = f.committed/w*100, rest = Math.max(0, f.eac - f.spent - f.committed)/w*100, bm = f.budget/w*100;
+  return `<div class="bbar" role="img" aria-label="${esc(f.name)}: spent ${fmM(f.spent)}, committed ${fmM(f.committed)}, to complete ${fmM(f.toComplete)}, budget ${fmM(f.budget)}">
+    <span style="width:${sp}%;background:var(--good)"></span><span style="width:${cm}%;background:var(--warn)"></span><span style="width:${rest}%;background:var(--surface-2);outline:1px dashed var(--muted);outline-offset:-1px"></span>
+    <i style="left:${bm}%" title="Budget"></i></div>`; }
+const BLEGEND = `<div class="chart-legend"><span><i style="background:var(--good)"></i>Spent</span><span><i style="background:var(--warn)"></i>Committed</span><span><i style="background:var(--surface-2);outline:1px dashed var(--muted)"></i>To complete</span><span><i class="ln" style="background:var(--fg)"></i>Budget</span></div>`;
+/* the same four figures head every view */
+const budgetKpis = (b, s, e, label) => `<section class="kpis">
+    <div class="kpi"><div class="eyebrow">Budget</div><div class="v">${fmM(b)}</div><div class="s">${label}</div></div>
+    <div class="kpi"><div class="eyebrow">Spent to date</div><div class="v">${fmM(s)}</div><div class="s">${b ? (s/b*100).toFixed(0) : 0}% of budget</div></div>
+    <div class="kpi"><div class="eyebrow">Forecast final cost</div><div class="v">${fmM(e)}</div><div class="s">${fmM(Math.max(0, e - s))} still to spend</div></div>
+    <div class="kpi"><div class="eyebrow">Variance</div><div class="v" style="color:${b - e < -1 ? "var(--bad)" : "var(--good)"}">${Math.abs(b - e) < 1 ? "On budget" : (b - e < 0 ? "−" : "+") + fmM(Math.abs(b - e))}</div><div class="s">${b - e < -1 ? "over budget" : Math.abs(b - e) < 1 ? "no overrun forecast" : "under budget"}</div></div>
+  </section>`;
+function budgetProject(f){
+  const G = f.groups, hasAct = f.lines.some(c => N(c.actual) || (hasItems(c) && c.items.some(i => i.actual != null)));
   const ledger = i => Array.isArray(i.ledger) && i.ledger.length ? `<div class="note" style="font-size:11.5px;margin:2px 0 4px 14px">${i.ledger.map(x => `${esc(x.item)} ${fm(N(x.amount))}`).join(" · ")}</div>` : "";
-  return `<section class="stack"><div class="spread"><h3>Line by line</h3>${hasAct ? `<span class="note">Budget · actual${asOf ? " to " + fdate(asOf) : ""} · % used</span>` : ""}</div>
-    <div class="list" style="display:flex">${L.map(c => { const groups = {}; c.items.forEach(i => (groups[i.group || ""] = groups[i.group || ""] || []).push(i));
-      const ca = sum(c.items, i => N(i.actual)), over = c.items.filter(i => N(i.actual) > N(i.amount) + 1).length;
-      return `<details class="item" style="display:block;cursor:pointer"><summary class="spread" style="list-style:none"><span><b>${esc(c.head)}</b> <span class="note">· ${c.items.length} line${c.items.length>1?"s":""}</span>${over ? " " + chip(over + " over","bad") : ""}</span><span>${hasAct ? `<span class="note">${fmM(ca)} of </span>` : ""}<b>${fmM(N(c.budget))}</b> ${hasAct ? usedChip(ca, N(c.budget)) : `<span class="note">${tot ? (N(c.budget)/tot*100).toFixed(1) : 0}%</span>`}</span></summary>
-        <div class="stmt one" style="margin-top:8px;font-size:13px">${Object.entries(groups).map(([g, it]) => `${g && Object.keys(groups).length > 1 ? `<div class="hd"><span>${esc(g)}</span><span>${hasAct ? fm(sum(it, i => N(i.actual))) + " / " : ""}${fm(sum(it, i => N(i.amount)))}</span></div>` : ""}${it.map(i => `<div class="ind"><span>${esc(i.line ? i.line + " · " : "")}${esc(i.item)}</span><span>${hasAct ? `${fm(N(i.actual))} / ` : ""}${fm(N(i.amount))}${hasAct ? " " + usedChip(N(i.actual), N(i.amount)) : ""}</span></div>${hasAct ? ledger(i) : ""}`).join("")}`).join("")}</div>
-        ${f.sqft ? `<p class="note" style="margin:6px 0 0">Budget LKR ${fm(N(c.budget)/f.sqft)} per sellable sq.ft${hasAct ? ` · actual LKR ${fm(ca/f.sqft)}` : ""}</p>` : ""}</details>`; }).join("")}</div>
-    ${hasAct ? `<p class="note" style="margin:0">Budget = forecast final cost. Under each line are the ledger items counted in its actual.</p>` : ""}
-    ${f.lines.some(c => !(Array.isArray(c.items) && c.items.length)) ? `<p class="note" style="margin:0">Not in the estimate: ${f.lines.filter(c => !(Array.isArray(c.items) && c.items.length)).map(c => `${esc(c.head)} ${fmM(N(c.budget))}`).join(", ")}.</p>` : ""}</section>`; }
-
+  return `${budgetKpis(f.budget, f.spent, f.eac, `${f.sqft ? "LKR " + fm(f.budget/f.sqft) + " per sq.ft · " : ""}${f.asOf ? "actual to " + fdate(f.asOf) : "no actuals yet"}`)}
+  <section class="card stack"><div class="spread"><h3>Cost progress</h3>${BLEGEND}</div>
+    <div class="stack" style="gap:4px"><div class="spread"><b>${esc(f.name)}</b>${vchip(f.var)}</div>${budgetBar(f)}<div class="note">${fmM(f.spent)} spent · ${fmM(f.toComplete)} to complete · budget ${fmM(f.budget)} · forecast profit ${fmM(f.profit)} (${f.margin.toFixed(1)}%)</div></div></section>
+  ${G.length ? `<section class="stack"><h3>By cost group</h3><div class="card" style="padding:0"><div class="scroll"><table class="qt bt"><thead><tr><th>Cost group</th><th>Budget</th><th>% of total</th><th>Per sq.ft</th><th>Spent</th><th>% used</th><th>Forecast final</th><th>Variance</th></tr></thead><tbody>
+    ${G.map(x => `<tr><td>${esc(x.g)}</td><td>${fm(x.budget)}</td><td>${f.budget ? (x.budget/f.budget*100).toFixed(1) : 0}%</td><td>${f.sqft ? fm(x.budget/f.sqft) : "–"}</td><td>${x.actual ? fm(x.actual) : "–"}</td><td>${usedChip(x.actual, x.budget)}</td><td>${fm(x.eac)}</td><td>${varTxt(x.budget - x.eac)}</td></tr>`).join("")}
+    <tr class="tot"><td>Total</td><td>${fm(f.budget)}</td><td>100%</td><td>${f.sqft ? fm(f.budget/f.sqft) : "–"}</td><td>${fm(f.spent)}</td><td>${usedChip(f.spent, f.budget)}</td><td>${fm(f.eac)}</td><td>${varTxt(f.var)}</td></tr>
+  </tbody></table></div></div></section>
+  <section class="stack"><div class="spread"><h3>Line by line</h3><span class="note">${hasAct ? `Spent${f.asOf ? " to " + fdate(f.asOf) : ""} / budget · % used` : "Budget"}</span></div>
+    <div class="list" style="display:flex">${G.map(x => { const over = x.items.filter(i => i.actual > i.budget + 1).length;
+      return `<details class="item" style="display:block;cursor:pointer"><summary class="spread" style="list-style:none"><span><b>${esc(x.g)}</b> <span class="note">· ${x.items.length} line${x.items.length>1?"s":""}</span>${over ? " " + chip(over + " over","bad") : ""}</span><span>${hasAct ? `<span class="note">${fmM(x.actual)} of </span>` : ""}<b>${fmM(x.budget)}</b> ${hasAct ? usedChip(x.actual, x.budget) : `<span class="note">${f.budget ? (x.budget/f.budget*100).toFixed(1) : 0}%</span>`}</span></summary>
+        <div class="stmt one" style="margin-top:8px;font-size:13px">${x.items.map(i => `<div class="ind"><span>${i.line ? i.line + " · " : ""}${esc(i.item)}</span><span>${hasAct ? `${fm(i.actual)} / ` : ""}${fm(i.budget)}${hasAct ? " " + usedChip(i.actual, i.budget) : ""}</span></div>${hasAct ? ledger(i) : ""}`).join("")}</div>
+        ${f.sqft ? `<p class="note" style="margin:6px 0 0">Budget LKR ${fm(x.budget/f.sqft)} per sellable sq.ft${hasAct ? ` · spent LKR ${fm(x.actual/f.sqft)}` : ""}</p>` : ""}</details>`; }).join("")}</div>
+    ${hasAct ? `<p class="note" style="margin:0">Under each line are the ledger items counted in its spend. Forecast final for a line is the larger of its budget and its spend.</p>` : ""}</section>`
+  : `<div class="card note">No cost lines for ${esc(f.name)} yet. Add them under Costs → Cost budgets.</div>`}
+  ${f.p.note ? `<p class="note">${esc(f.p.note)}</p>` : ""}`;
+}
 /* line-by-line comparison across projects (matched on line number, or name when there is none) */
 function budgetCompare(F){
   const per = ui.bPer === "sqft", act = ui.bWhat === "actual", rows = {}, ord = [];
-  F.forEach((f, k) => f.lines.forEach(c => (Array.isArray(c.items) ? c.items : []).forEach(it => {
+  F.forEach((f, k) => budgetItems(f).forEach(it => {
     const key = it.line ? "L" + it.line : "N" + String(it.item).toLowerCase();
-    if(!rows[key]){ rows[key] = { line: it.line, item: it.item, group: it.group || c.head, head: c.head, v: F.map(() => 0) }; ord.push(key); }
-    rows[key].v[k] += act ? N(it.actual) : N(it.amount); })));
+    if(!rows[key]){ rows[key] = { line: it.line, item: it.item, group: it.group, v: F.map(() => 0) }; ord.push(key); }
+    rows[key].v[k] += act ? it.actual : it.budget; }));
   if(!ord.length) return `<div class="card note">Line items appear here once each project's cost report is loaded by line.</div>`;
-  const groups = []; ord.sort((a,b) => (rows[a].line||999) - (rows[b].line||999)).forEach(k => { const g = rows[k].group; let G = groups.find(x => x.g === g); if(!G){ G = { g, keys: [] }; groups.push(G); } G.keys.push(k); });
+  const groups = BGROUPS.map(g => ({ g, keys: [] }));
+  ord.sort((a,b) => (rows[a].line||999) - (rows[b].line||999)).forEach(k => { let G = groups.find(x => x.g === rows[k].group); if(!G){ G = { g: rows[k].group, keys: [] }; groups.push(G); } G.keys.push(k); });
   const val = (v, f) => !v ? `<span class="note">–</span>` : per ? (f.sqft ? fm(v / f.sqft) : "–") : fm(v);
   const last = F.length - 1, bench = F.slice(0, last);
-  const chg = r => { const ps = bench.filter((f,k) => r.v[k] && f.sqft).map(f => r.v[F.indexOf(f)] / f.sqft); if(!ps.length || !r.v[last] || !F[last].sqft) return ""; const avg = ps.reduce((a,b)=>a+b,0)/ps.length, d = (r.v[last]/F[last].sqft - avg)/avg*100;
+  const chg = r => { if(act) return ""; const ps = bench.filter((f,k) => r.v[k] && f.sqft).map(f => r.v[F.indexOf(f)] / f.sqft); if(!ps.length || !r.v[last] || !F[last].sqft) return ""; const avg = ps.reduce((a,b)=>a+b,0)/ps.length, d = (r.v[last]/F[last].sqft - avg)/avg*100;
     const r0 = Math.round(d); return `<span class="${d > 25 ? "neg" : ""}">${r0 > 0 ? "+" : ""}${r0 === 0 ? 0 : r0}%</span>`; };
   const tot = F.map((f,k) => sum(ord, key => rows[key].v[k]));
-  return `<div class="spread"><p class="note" style="margin:0">${act ? "Actual cost to date" : "Budget (forecast final cost)"} · ${per ? "LKR per sellable sq.ft" : "LKR"} · ${F.map(f => `${esc(f.name)} ${fm(f.sqft)} sq.ft`).join(" · ")}</p><div class="row">${subSeg("bwhat", act ? "actual" : "budget", [["budget","Budget"],["actual","Actual to date"]])}${subSeg("bper", per ? "sqft" : "lkr", [["lkr","LKR"],["sqft","Per sq.ft"]])}</div></div>
-  <div class="card" style="padding:0"><div class="scroll"><table class="qt bt"><thead><tr><th>Cost line</th>${F.map(f => `<th>${esc(f.name)}</th>`).join("")}<th title="${esc(F[last].name)} per sq.ft against the average of the others">vs others /sq.ft</th></tr></thead><tbody>
-    ${groups.map(G => `<tr class="tot"><td>${esc(G.g)}</td>${F.map((f,k) => `<td>${val(sum(G.keys, key => rows[key].v[k]), f)}</td>`).join("")}<td></td></tr>
-      ${G.keys.map(key => { const r = rows[key]; return `<tr><td>${r.line ? r.line + " · " : ""}${esc(r.item)}</td>${F.map((f,k) => `<td>${val(r.v[k], f)}</td>`).join("")}<td>${chg(r)}</td></tr>`; }).join("")}`).join("")}
-    <tr class="tot"><td>Total development cost</td>${F.map((f,k) => `<td>${val(tot[k], f)}</td>`).join("")}<td></td></tr>
+  return `<div class="spread"><p class="note" style="margin:0">${act ? "Spent to date" : "Budget"} · ${per ? "LKR per sellable sq.ft" : "LKR"} · ${F.map(f => `${esc(f.name)} ${fm(f.sqft)} sq.ft`).join(" · ")}</p><div class="row">${subSeg("bwhat", act ? "actual" : "budget", [["budget","Budget"],["actual","Spent to date"]])}${subSeg("bper", per ? "sqft" : "lkr", [["lkr","LKR"],["sqft","Per sq.ft"]])}</div></div>
+  <div class="card" style="padding:0"><div class="scroll"><table class="qt bt"><thead><tr><th>Cost line</th>${F.map(f => `<th>${esc(f.name)}</th>`).join("")}${act ? "" : `<th title="${esc(F[last].name)} per sq.ft against the average of the others">vs others /sq.ft</th>`}</tr></thead><tbody>
+    ${groups.filter(G => G.keys.length).map(G => `<tr class="tot"><td>${esc(G.g)}</td>${F.map((f,k) => `<td>${val(sum(G.keys, key => rows[key].v[k]), f)}</td>`).join("")}${act ? "" : "<td></td>"}</tr>
+      ${G.keys.map(key => { const r = rows[key]; return `<tr><td>${r.line ? r.line + " · " : ""}${esc(r.item)}</td>${F.map((f,k) => `<td>${val(r.v[k], f)}</td>`).join("")}${act ? "" : `<td>${chg(r)}</td>`}</tr>`; }).join("")}`).join("")}
+    <tr class="tot"><td>Total</td>${F.map((f,k) => `<td>${val(tot[k], f)}</td>`).join("")}${act ? "" : "<td></td>"}</tr>
   </tbody></table></div></div>
-  <p class="note" style="margin:0">Last column: ${esc(F[last].name)}'s cost per sq.ft against the average of ${bench.map(f => esc(f.name)).join(" and ")} for the same line; red where more than 25% higher.</p>`;
-}
-function budgetProject(f){
-  const tot = sum(f.lines, c => N(c.budget)), L = f.lines.slice().sort((a,b) => N(b.budget) - N(a.budget));
-  return `<section class="hero" style="border-left-color:${f.var < -1 ? "var(--bad)" : "var(--good)"}">
-    <div class="eyebrow">${esc(f.name)} · cost budget</div><div class="big">LKR ${fm(f.budget)}</div>
-    <div class="meta">${f.sqft ? `LKR ${fm(f.budget/f.sqft)} per sellable sq.ft (${fm(f.sqft)} sq.ft) · ` : ""}${f.heads} cost heads · forecast profit ${fmM(f.profit)} (${f.margin.toFixed(1)}%)</div></section>
-  <section class="kpis">
-    <div class="kpi"><div class="eyebrow">Spent to date</div><div class="v">${fmM(f.spent)}</div><div class="s">${f.used.toFixed(0)}% of budget${f.s.costFromProject ? " · project total" : ""}${(f.lines.find(c => c.actualAsOf) || {}).actualAsOf ? " · to " + fdate(f.lines.find(c => c.actualAsOf).actualAsOf) : ""}</div></div>
-    <div class="kpi"><div class="eyebrow">To complete</div><div class="v">${fmM(f.toComplete)}</div><div class="s">forecast final ${fmM(f.eac)}</div></div>
-    <div class="kpi"><div class="eyebrow">Sales value</div><div class="v">${fmM(f.sales)}</div><div class="s">${f.units ? `${f.sold} of ${f.units} units sold` : ""}</div></div>
-    <div class="kpi"><div class="eyebrow">Collected</div><div class="v">${fmM(f.collected)}</div><div class="s">from buyers</div></div>
-  </section>
-  ${f.lines.length ? `<section class="stack"><h3>By cost head</h3><div class="card" style="padding:0"><div class="scroll"><table class="qt bt"><thead><tr><th>Cost head</th><th>Budget</th><th>% of total</th><th>Per sq.ft</th><th>Spent</th><th>Forecast final</th><th>Variance</th></tr></thead><tbody>
-    ${L.map(c => { const e = eac(c), v = N(c.budget) - e; return `<tr${canWrite ? ` class="click" data-edit="costs:${esc(c.id)}"` : ""}><td>${esc(c.head)}</td><td>${fm(N(c.budget))}</td><td>${tot ? (N(c.budget)/tot*100).toFixed(1) : 0}%</td><td>${f.sqft ? fm(N(c.budget)/f.sqft) : "–"}</td><td>${N(c.actual) ? fm(N(c.actual)) : "–"}</td><td>${fm(e)}</td><td class="${v < -1 ? "neg" : ""}">${Math.abs(v) < 1 ? "–" : (v < 0 ? "(" + fm(-v) + ")" : fm(v))}</td></tr>`; }).join("")}
-    <tr class="tot"><td>Total</td><td>${fm(tot)}</td><td>100%</td><td>${f.sqft ? fm(tot/f.sqft) : "–"}</td><td>${fm(f.spent)}</td><td>${fm(f.eac)}</td><td class="${f.var < -1 ? "neg" : ""}">${Math.abs(f.var) < 1 ? "–" : (f.var < 0 ? "(" + fm(-f.var) + ")" : fm(f.var))}</td></tr>
-  </tbody></table></div></div>
-  ${f.s.costFromProject ? `<p class="note" style="margin:0">Spent to date is the project total (${fmM(f.spent)}) from the project record; it isn't split by cost head yet.</p>` : ""}</section>` : `<div class="card note">No cost lines for ${esc(f.name)} yet.</div>`}
-  ${f.lines.some(c => Array.isArray(c.items) && c.items.length) ? budgetLines(f) : ""}
-  ${f.p.note ? `<p class="note">${esc(f.p.note)}</p>` : ""}`;
+  ${act ? "" : `<p class="note" style="margin:0">Last column: ${esc(F[last].name)}'s budget per sq.ft against the average of ${bench.map(f => esc(f.name)).join(" and ")} for the same line; red where more than 25% higher.</p>`}`;
 }
 function viewBudget(){
   if(notReady("projects") || notReady("costs")) return loadingList();
@@ -1669,69 +1693,51 @@ function viewBudget(){
   const subs = [["overview","Overview"]].concat(F.map(f => [f.name, f.name])).concat([["compare","Line comparison"]]);
   const bs = subs.some(x => x[0] === ui.bSub) ? ui.bSub : "overview";
   const bseg = subSeg("bsub", bs, subs);
-  if(bs === "compare") return bseg + `<h3>Line-by-line comparison</h3>` + budgetCompare(F);
+  if(bs === "compare") return bseg + budgetCompare(F);
   if(bs !== "overview") return bseg + budgetProject(F.find(f => f.name === bs));
   const T_ = k => sum(F, f => f[k]);
-  const tb = T_("budget"), te = T_("eac"), ts = T_("spent"), tc = T_("committed");
-  const vchip = v => Math.abs(v) < 1 ? chip("On budget","good") : v > 0 ? chip("Under " + fmM(v),"good") : chip("Over " + fmM(-v),"bad");
   const row = (label, fn, cls) => `<tr${cls?` class="${cls}"`:""}><td>${label}</td>${F.map(f => `<td>${fn(f)}</td>`).join("")}</tr>`;
   const pctTxt = v => isFinite(v) && v ? v.toFixed(1) + "%" : "–";
-  // flags
   const flags = [];
   F.forEach(f => {
-    if(f.var < -1) flags.push(["bad", `${f.name}: forecast ${fmM(f.eac)} is ${fmM(-f.var)} over the budget of ${fmM(f.budget)}`]);
-    f.lines.forEach(c => { const u = N(c.budget) ? (N(c.actual)+N(c.committed))/N(c.budget)*100 : 0;
-      if(N(c.actual)+N(c.committed) > N(c.budget) + 1) flags.push(["bad", `${f.name} · ${c.head}: spent and committed ${fmM(N(c.actual)+N(c.committed))} exceeds the budget of ${fmM(N(c.budget))}`]);
-      else if(u > 90) flags.push(["warn", `${f.name} · ${c.head}: ${u.toFixed(0)}% of budget used`]); });
-    if(!f.heads) flags.push(["info", `${f.name}: budget held as one total only. Load the cost report by cost head (land, construction, consultants…) to analyse it line by line.`]);
-    if(f.margin && f.margin < 15) flags.push(["warn", `${f.name}: forecast margin ${f.margin.toFixed(1)}%`]);
+    if(f.var < -1) flags.push(["bad", `${f.name}: forecast final ${fmM(f.eac)} is ${fmM(-f.var)} over the budget of ${fmM(f.budget)}${f.overLines.length ? ` – ${f.overLines.length} line${f.overLines.length>1?"s":""} already spent above budget, largest: ${f.overLines.slice(0,3).map(i => `${i.line ? i.line + " " : ""}${i.item} +${fmM(i.actual - i.budget)}`).join(", ")}` : ""}`, f.name]);
+    f.groups.forEach(x => { const u = x.budget ? x.actual / x.budget * 100 : 0; if(u > 90 && u <= 100.5) flags.push(["warn", `${f.name} · ${x.g}: ${u.toFixed(0)}% of budget spent`, f.name]); });
+    if(!f.heads) flags.push(["info", `${f.name}: no cost lines yet. Load the cost report by line to analyse it.`, f.name]);
+    if(f.margin && f.margin < 15) flags.push(["warn", `${f.name}: forecast margin ${f.margin.toFixed(1)}%`, f.name]);
   });
   const ico = { bad:"var(--bad)", warn:"var(--warn)", info:"var(--muted)" };
-  const bar = f => { const w = Math.max(f.budget, f.eac, 1), sp = f.spent/w*100, cm = f.committed/w*100, rest = Math.max(0, f.eac - f.spent - f.committed)/w*100, bm = f.budget/w*100;
-    return `<div class="bbar" role="img" aria-label="${esc(f.name)}: spent ${fmM(f.spent)}, committed ${fmM(f.committed)}, to complete ${fmM(f.toComplete)}, budget ${fmM(f.budget)}">
-      <span style="width:${sp}%;background:var(--good)"></span><span style="width:${cm}%;background:var(--warn)"></span><span style="width:${rest}%;background:var(--surface-2);outline:1px dashed var(--muted);outline-offset:-1px"></span>
-      <i style="left:${bm}%" title="Budget"></i></div>`; };
-  // head matrix
-  const heads = BHEADS.filter(h => F.some(f => f.lines.some(c => c.head === h)));
-  const cell = (f, h) => { const c = f.lines.filter(x => x.head === h); if(!c.length) return `<span class="note">–</span>`;
-    const b = sum(c, x=>N(x.budget)), a = sum(c, x=>N(x.actual)+N(x.committed)), e = sum(c, eac), u = b ? a/b*100 : 0;
-    return `${fmM(b)}<div class="note">${fmM(a)} used · ${u.toFixed(0)}%${Math.abs(b-e) >= 1 ? ` · ${b-e<0?"over":"under"} ${fmM(Math.abs(b-e))}` : ""}</div>`; };
+  const grp = BGROUPS.concat([...new Set(F.flatMap(f => f.groups.map(x => x.g)))].filter(g => !BGROUPS.includes(g))).filter(g => F.some(f => f.groups.some(x => x.g === g)));
+  const gcell = (f, g) => { const x = f.groups.find(y => y.g === g); if(!x) return `<span class="note">–</span>`;
+    return `${fmM(x.budget)}<div class="note">${x.actual ? fmM(x.actual) + " spent · " : ""}${usedChip(x.actual, x.budget)}${Math.abs(x.budget - x.eac) >= 1 ? ` · over ${fmM(x.eac - x.budget)}` : ""}</div>`; };
   return `${bseg}
-  <section class="kpis">
-    <div class="kpi"><div class="eyebrow">Total cost budget</div><div class="v">${fmM(tb)}</div><div class="s">${F.length} projects</div></div>
-    <div class="kpi"><div class="eyebrow">Spent + committed</div><div class="v">${fmM(ts+tc)}</div><div class="s">${tb ? ((ts+tc)/tb*100).toFixed(0) : 0}% of budget</div></div>
-    <div class="kpi"><div class="eyebrow">Forecast final cost</div><div class="v">${fmM(te)}</div><div class="s">${fmM(Math.max(0,te-ts-tc))} still to spend</div></div>
-    <div class="kpi"><div class="eyebrow">Forecast vs budget</div><div class="v" style="color:${tb-te<-1?"var(--bad)":"var(--good)"}">${Math.abs(tb-te)<1?"On budget":(tb-te<0?"−":"+")+fmM(Math.abs(tb-te))}</div><div class="s">${tb-te<-1?"over budget":Math.abs(tb-te)<1?"no overrun forecast":"under budget"}</div></div>
+  ${budgetKpis(T_("budget"), T_("spent"), T_("eac"), `${F.length} projects`)}
+  <section class="card stack"><div class="spread"><h3>Cost progress</h3>${BLEGEND}</div>
+    ${F.map(f => `<div class="stack" style="gap:4px"><div class="spread"><button class="linkbtn" data-bsub="${esc(f.name)}"><b>${esc(f.name)}</b> <span class="note">›</span></button>${vchip(f.var)}</div>${budgetBar(f)}<div class="note">${fmM(f.spent)} spent${f.asOf ? " to " + fdate(f.asOf) : ""}${f.committed?` · ${fmM(f.committed)} committed`:""} · ${fmM(f.toComplete)} to complete · budget ${fmM(f.budget)} · ${f.used.toFixed(0)}% spent</div></div>`).join("")}
   </section>
-  <section class="card stack"><div class="spread"><h3>Cost progress</h3><div class="chart-legend"><span><i style="background:var(--good)"></i>Spent</span><span><i style="background:var(--warn)"></i>Committed</span><span><i style="background:var(--surface-2);outline:1px dashed var(--muted)"></i>To complete</span><span><i class="ln" style="background:var(--fg)"></i>Budget</span></div></div>
-    ${F.map(f => `<div class="stack" style="gap:4px"><div class="spread"><b>${esc(f.name)}${f.s.costFromProject ? ` <span class="note" style="font-weight:400">· spent = project total</span>` : ""}</b><span>${vchip(f.var)}</span></div>${bar(f)}<div class="note">${fmM(f.spent)} spent${f.committed?` · ${fmM(f.committed)} committed`:""} · ${fmM(f.toComplete)} to complete · budget ${fmM(f.budget)} · ${f.used.toFixed(0)}% used</div></div>`).join("")}
-  </section>
-  <section class="stack"><h3>Project comparison</h3><div class="card" style="padding:0"><div class="scroll"><table class="qt bt"><thead><tr><th>LKR</th>${F.map(f => `<th>${esc(f.name)}</th>`).join("")}</tr></thead><tbody>
+  <section class="stack"><h3>Project comparison</h3><div class="card" style="padding:0"><div class="scroll"><table class="qt bt"><thead><tr><th>LKR</th>${F.map(f => `<th><button class="linkbtn" data-bsub="${esc(f.name)}">${esc(f.name)} ›</button></th>`).join("")}</tr></thead><tbody>
     ${row("Sales value (sold + unsold at list price)", f => fmM(f.sales))}
     ${row("Units sold", f => f.units ? `${f.sold} / ${f.units}` : "–")}
-    ${row("Cost budget", f => fmM(f.budget), "tot")}
+    ${row("Budget", f => fmM(f.budget), "tot")}
     ${row("Spent to date", f => fmM(f.spent))}
-    ${row("Committed", f => fmM(f.committed))}
-    ${row("To complete", f => fmM(f.toComplete))}
+    ${row("% spent", f => pctTxt(f.used))}
     ${row("Forecast final cost", f => fmM(f.eac), "tot")}
-    ${row("Variance to budget", f => `<span class="${f.var<-1?"neg":""}">${f.var<-1?"(":""}${fmM(Math.abs(f.var))}${f.var<-1?")":""}</span>`)}
-    ${row("% of budget used", f => pctTxt(f.used))}
+    ${row("Variance to budget", f => Math.abs(f.var) < 1 ? "–" : f.var < 0 ? `<span class="neg">(${fmM(-f.var)})</span>` : fmM(f.var))}
+    ${row("Still to spend", f => fmM(f.toComplete))}
     ${row("Forecast profit", f => `<span class="${f.profit<0?"neg":""}">${fmM(f.profit)}</span>`, "tot")}
     ${row("Margin on sales", f => pctTxt(f.margin))}
-    ${row("Cost per sellable sq.ft (LKR)", f => f.perSqft ? fm(f.perSqft) : "–")}
+    ${row("Budget per sellable sq.ft (LKR)", f => f.sqft ? fm(f.budget / f.sqft) : "–")}
     ${row("Sales per sq.ft (LKR)", f => f.sqft && f.sales ? fm(f.sales / f.sqft) : "–")}
     ${row("Collected from buyers", f => fmM(f.collected))}
-    ${row("Bank loan outstanding", f => fmM(f.loanOut))}
-    ${row("Cost detail", f => f.heads ? `${f.heads} cost heads` : `<span class="note">total only</span>`)}
-  </tbody></table></div></div>
-  <p class="note" style="margin:0">Forecast final cost = each line's forecast if entered, otherwise the larger of its budget and spent + committed. Profit is before tax. Bracketed variance = over budget.</p></section>
-  ${heads.length ? `<section class="stack"><h3>By cost head</h3><div class="card" style="padding:0"><div class="scroll"><table class="qt bt"><thead><tr><th>Budget · used</th>${F.map(f => `<th>${esc(f.name)}</th>`).join("")}</tr></thead><tbody>
-    ${heads.map(h => `<tr><td>${esc(h)}</td>${F.map(f => `<td>${cell(f,h)}</td>`).join("")}</tr>`).join("")}
-  </tbody></table></div></div></section>` : ""}
+    ${row("Actual cost to", f => f.asOf ? fdate(f.asOf) : `<span class="note">no actuals</span>`)}
+  </tbody></table></div></div></section>
+  ${grp.length ? `<section class="stack"><h3>By cost group</h3><div class="card" style="padding:0"><div class="scroll"><table class="qt bt"><thead><tr><th>Budget · spent · % used</th>${F.map(f => `<th>${esc(f.name)}</th>`).join("")}</tr></thead><tbody>
+    ${grp.map(g => `<tr><td>${esc(g)}</td>${F.map(f => `<td>${gcell(f, g)}</td>`).join("")}</tr>`).join("")}
+    <tr class="tot"><td>Total</td>${F.map(f => `<td>${fmM(f.budget)}<div class="note">${f.spent ? fmM(f.spent) + " spent · " : ""}${usedChip(f.spent, f.budget)}</div></td>`).join("")}</tr>
+  </tbody></table></div></div><p class="note" style="margin:0">The same groups as each project's tab and the line comparison. Forecast final for each line is the larger of its budget and its spend.</p></section>` : ""}
   <section class="stack"><div class="spread"><h3>Points to watch</h3>${flags.filter(x=>x[0]==="bad").length ? chip(flags.filter(x=>x[0]==="bad").length + " over budget","bad") : chip("Nothing over budget","good")}</div>
-    ${flags.length ? `<div class="list">${flags.map(x => `<div class="item" style="cursor:default;border-left:3px solid ${ico[x[0]]}"><div><div class="d" style="color:var(--fg)">${esc(x[1])}</div></div></div>`).join("")}</div>` : ""}
+    ${flags.length ? `<div class="list" style="display:flex">${flags.map(x => `<button class="item" data-bsub="${esc(x[2])}" style="border-left:3px solid ${ico[x[0]]}"><div><div class="d" style="color:var(--fg)">${esc(x[1])}</div></div><span class="note">›</span></button>`).join("")}</div>` : ""}
   </section>
-  <p class="note">Cost lines are kept under Costs → Cost budgets: open a project to add or update a line (budget, spent, committed and forecast final cost).</p>`;
+  <p class="note">Cost lines are kept under Costs → Cost budgets. Open a project to add or update a line.</p>`;
 }
 
 function viewCosts(){
