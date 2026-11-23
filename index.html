@@ -1669,6 +1669,13 @@ function viewBudget(){
   ${heads.length ? `<section class="stack"><h3>By cost head</h3><div class="card" style="padding:0"><div class="scroll"><table class="qt bt"><thead><tr><th>Budget · used</th>${F.map(f => `<th>${esc(f.name)}</th>`).join("")}</tr></thead><tbody>
     ${heads.map(h => `<tr><td>${esc(h)}</td>${F.map(f => `<td>${cell(f,h)}</td>`).join("")}</tr>`).join("")}
   </tbody></table></div></div></section>` : ""}
+  ${F.filter(f => f.lines.some(c => Array.isArray(c.items) && c.items.length)).map(f => { const L = f.lines.filter(c => Array.isArray(c.items) && c.items.length).sort((a,b) => N(b.budget) - N(a.budget)), tot = sum(f.lines, c => N(c.budget));
+    return `<section class="stack"><h3>${esc(f.name)} · estimate line by line</h3>
+    <div class="list" style="display:flex">${L.map(c => { const groups = {}; c.items.forEach(i => (groups[i.group || ""] = groups[i.group || ""] || []).push(i));
+      return `<details class="item" style="display:block;cursor:pointer"><summary class="spread" style="list-style:none"><span><b>${esc(c.head)}</b> <span class="note">· ${c.items.length} line${c.items.length>1?"s":""}</span></span><span><b>${fmM(N(c.budget))}</b> <span class="note">${tot ? (N(c.budget)/tot*100).toFixed(1) : 0}%</span></span></summary>
+        <div class="stmt one" style="margin-top:8px;font-size:13px">${Object.entries(groups).map(([g, it]) => `${g && Object.keys(groups).length > 1 ? `<div class="hd"><span>${esc(g)}</span><span>${fm(sum(it, i => N(i.amount)))}</span></div>` : ""}${it.map(i => `<div class="ind"><span>${esc(i.line ? i.line + " · " : "")}${esc(i.item)}</span><span>${fm(N(i.amount))}</span></div>`).join("")}`).join("")}</div>
+        ${f.sqft ? `<p class="note" style="margin:6px 0 0">LKR ${fm(N(c.budget)/f.sqft)} per sellable sq.ft</p>` : ""}</details>`; }).join("")}</div>
+    ${f.lines.some(c => !(Array.isArray(c.items) && c.items.length)) ? `<p class="note" style="margin:0">Not in the estimate: ${f.lines.filter(c => !(Array.isArray(c.items) && c.items.length)).map(c => `${esc(c.head)} ${fmM(N(c.budget))}`).join(", ")}.</p>` : ""}</section>`; }).join("")}
   <section class="stack"><div class="spread"><h3>Points to watch</h3>${flags.filter(x=>x[0]==="bad").length ? chip(flags.filter(x=>x[0]==="bad").length + " over budget","bad") : chip("Nothing over budget","good")}</div>
     ${flags.length ? `<div class="list">${flags.map(x => `<div class="item" style="cursor:default;border-left:3px solid ${ico[x[0]]}"><div><div class="d" style="color:var(--fg)">${esc(x[1])}</div></div></div>`).join("")}</div>` : ""}
   </section>
