@@ -79,9 +79,9 @@ html.nx-mobile .ugrid{grid-template-columns:repeat(2,minmax(0,1fr))}
 
   function asAt(D){ const s = (D.at || "").slice(0,10); if(!s) return ""; const [y,m,d] = s.split("-").map(Number); return `${d} ${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][m-1]} ${y}`; }
   /* layout: "wide" (full screen) or "mobile"; default full screen on screens 900px and wider */
-  function layout(){ const v = store.get("nx-dir-layout") || (window.innerWidth >= 900 ? "wide" : "mobile");
+  function layout(){ const v = store.get("nx-dir-layout2") || "wide";
     document.documentElement.classList.toggle("nx-wide", v === "wide"); document.documentElement.classList.toggle("nx-mobile", v === "mobile"); return v; }
-  function setLayout(v){ store.set("nx-dir-layout", v); layout(); drawBar(); window.dispatchEvent(new Event("resize")); }
+  function setLayout(v){ store.set("nx-dir-layout2", v); layout(); drawBar(); window.dispatchEvent(new Event("resize")); }
   let barD = null;
   function drawBar(){ if(!barD) return; const v = layout(), bar = document.getElementById("nxbar");
     bar.innerHTML = `<div><span class="lbl">Directors' view · </span>figures as at ${asAt(barD)}<span class="sep">|</span><button type="button" id="nxlay">${v === "wide" ? "Mobile view" : "Full screen"}</button><span class="sep">|</span><button type="button" id="nxout">Lock</button></div>`; bar.hidden = false;
