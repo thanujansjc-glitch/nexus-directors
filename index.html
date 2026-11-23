@@ -300,6 +300,34 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
 .ok{color:var(--good);font-size:13px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(140px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:9px 16px;border-radius:99px;font-size:14px;font-weight:600;z-index:30;max-width:calc(100% - 32px);text-align:center}
 @media (prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(24px);opacity:.6}}}
+/* dashboard tiles */
+.dash{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.dash .tile{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:left;min-width:0;display:flex;flex-direction:column;gap:4px;color:var(--fg);cursor:pointer}
+.dash .tile.big{grid-column:1/-1;border-left:4px solid var(--good)}
+.dash .tile .v{font-family:var(--f-display);font-weight:700;font-size:22px}.dash .tile.big .v{font-size:clamp(26px,4vw,38px)}
+.dash .tile .s{font-size:12.5px;color:var(--muted)}
+.spk{width:100%;height:40px;display:block;margin-top:6px}.tile.big .spk{height:54px}
+.spkx{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
+.pbars{display:flex;flex-direction:column;gap:5px;margin-top:6px}.pbars div{display:grid;grid-template-columns:minmax(0,1.3fr) 2fr 36px;gap:6px;align-items:center;font-size:12px}
+.pbars span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted)}.pbars i{display:block;height:8px;border-radius:4px}.pbars em{font-style:normal;font-size:11.5px;text-align:right;color:var(--muted)}
+@media (min-width:900px){.dash{grid-template-columns:repeat(4,minmax(0,1fr))}}
+/* grouped alerts */
+.agrp{display:flex;flex-direction:column;gap:6px}.agrp+.agrp{margin-top:8px}
+.alink{all:unset;cursor:pointer;display:block}.alink:focus-visible{outline:2px solid var(--accent);border-radius:6px}
+.aacts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+/* budget group chart */
+.gbars{display:flex;flex-direction:column;gap:8px}.gb{display:grid;grid-template-columns:minmax(110px,180px) 1fr auto;gap:10px;align-items:center;font-size:12.5px}
+.gl{color:var(--muted)}.gt{position:relative;height:14px;background:transparent}.gt span{position:absolute;top:0;height:100%;border-radius:4px}
+.gt .b{left:0;background:var(--surface-2);outline:1px solid var(--line)}.gt .a{left:0;background:var(--good)}.gt .o{background:var(--bad)}.gv{white-space:nowrap;font-size:12px}
+@media (max-width:520px){.gb{grid-template-columns:1fr auto}.gb .gt{grid-column:1/-1;order:3}}
+/* printing the monthly pack */
+@media print{
+  header.top,nav.tabs,.fab,#nxbar,.noprint,#toastroot,#sheetroot{display:none!important}
+  main>*:not(.pack):not(style){display:none!important}
+  html,body,main{background:#fff!important;padding:0!important;margin:0!important;max-width:none!important}
+  .pack{padding:0!important;max-width:none!important;border-radius:0}
+  @page{size:A4;margin:14mm}
+}
 /* Full screen: use the whole width of a computer screen; Mobile view: a phone-width column */
 html.nx-wide main,html.nx-wide .top-in,html.nx-wide nav.tabs .in{max-width:min(1600px,100%)}
 html.nx-wide main{padding-inline:clamp(16px,3vw,40px);gap:22px}
@@ -336,6 +364,7 @@ html.nx-host .toast{bottom:auto}
   <div><h1>Nexus Finance Desk</h1><div class="sub">Nexus Property Developers (Pvt) Ltd · LKR</div></div>
   <div class="tools">
     <div class="sync" id="sync"><span class="dot" id="syncdot"></span><span id="synctxt">Connecting…</span></div>
+    <button class="iconbtn" type="button" data-act="search" aria-label="Search" title="Search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></button>
     <button class="iconbtn" type="button" id="laybtn" data-act="layout" hidden></button>
     <button class="iconbtn" type="button" data-act="data" aria-label="Import and export with Excel" title="Import / export Excel"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 17v3h16v-3"/></svg></button>
   </div>
@@ -847,22 +876,15 @@ function viewHome(){
   const spark = D.banks.length ? forecastChart(fc, true) : "";
   return `
   ${exampleBanner()}
-  <section class="hero">
-    <div class="eyebrow">Cash at bank</div>
-    <div class="big">LKR ${fm(cab)}</div>
-    <div class="meta">${D.banks.length ? `${D.banks.length} account${D.banks.length>1?"s":""} · latest balance ${fdate(lastAsOf)}` : (notReady("banks") ? "Loading…" : "Add your bank accounts in Cash")}</div>
-  </section>
-  <section class="kpis">
+  ${dashTiles()}
+  <section class="kpis" hidden>
     <button class="kpi" data-go="recv"><div class="eyebrow">Receivable</div><div class="v">${fmM(rTot)}</div><div class="s">${ro.length} open · ${rOver.length} overdue</div></button>
     <button class="kpi" data-go="pay"><div class="eyebrow">Payable</div><div class="v">${fmM(pTot)}</div><div class="s">${po.length} open · ${pSoon.length} due ≤14d</div></button>
     <div class="kpi"><div class="eyebrow">Net working cash</div><div class="v">${fmM(cab + rTot - pTot)}</div><div class="s">Cash + receivable − payable</div></div>
     <button class="kpi" data-go="tax"><div class="eyebrow">Tax due ≤30d</div><div class="v">${t30.length}</div><div class="s">${fmM(sum(t30,t=>N(t.amount)))} where amounts known</div></button>
   </section>
   ${scanCard()}
-  <section class="stack">
-    <h3>Needs attention</h3>
-    <div class="alerts">${A.length ? A.map(a => `<button class="alert ${a[0]}" data-go="${a[3]}" ${a[4]?`data-f="${a[4]}"`:""}><span class="bar"></span><span><span class="t">${esc(a[1])}</span><span class="d">${esc(a[2])}</span></span></button>`).join("") : `<div class="card note">${COLS.every(c=>loaded[c]) ? "Add bank balances, customer instalments and supplier bills to see alerts here." : "Loading…"}</div>`}</div>
-  </section>
+  ${homeAlerts()}
   ${p65Card()}
   ${ffsCard()}
   ${syncCard()}
@@ -1249,18 +1271,250 @@ function viewVat(){
   </section>`;
 }
 
+/* ================= dashboard, search, alerts, budget charts, monthly pack ================= */
+const monthsBack = n => { const out = []; let m = T.slice(0,7); for(let i = 0; i < n; i++){ out.unshift(m); m = mPrev(m); } return out; };
+const monLbl = m => MON[+m.slice(5)-1];
+/* tiny line or bar chart; values may include null (no data) */
+function spark(vals, o){
+  o = o || {}; const W = o.w || 160, H = o.h || 40, n = vals.length; if(!n) return "";
+  const v = vals.map(x => x == null ? null : N(x)), real = v.filter(x => x != null); if(!real.length) return "";
+  let mn = o.bars ? Math.min(0, ...real) : Math.min(...real), mx = Math.max(...real); if(mx === mn){ mx = mn + 1; if(!o.bars) mn = mn - 1; } if(!o.bars){ const pad = (mx - mn) * 0.12; mn -= pad; mx += pad; }
+  const x = i => n === 1 ? W/2 : 2 + (W-4) * i/(n-1), y = t => 3 + (H-6) * (1 - (t-mn)/(mx-mn));
+  const col = o.color || "var(--accent)";
+  if(o.bars){ const bw = Math.max(2, (W-4)/n - 3);
+    return `<svg class="spk" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">${v.map((t,i) => t == null ? "" : `<rect x="${2 + i*(W-4)/n + 1.5}" y="${y(Math.max(t,0))}" width="${bw}" height="${Math.max(1, y(mn<0?0:mn) - y(Math.max(t,0)))}" rx="1.5" fill="${col}" opacity="${i === n-1 ? 1 : .55}"/>`).join("")}</svg>`; }
+  const pts = v.map((t,i) => t == null ? null : `${x(i)},${y(t)}`).filter(Boolean);
+  return `<svg class="spk" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts.join(" ")}" fill="none" stroke="${col}" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>${(() => { const li = v.length - 1 - [...v].reverse().findIndex(t => t != null); return `<circle cx="${x(li)}" cy="${y(v[li])}" r="2.6" fill="${col}"/>`; })()}</svg>`;
+}
+/* customer money overdue at each month end, and collected in each month */
+function recvHistory(ms){
+  return ms.map(m => { const end = mEnd(m) < T ? mEnd(m) : T; let od = 0, col = 0;
+    D.recv.forEach(r => { const rc = Array.isArray(r.receipts) ? r.receipts : [];
+      const paid = sum(rc.filter(x => String(x.date||"") <= end), x => N(x.amount)) || (rc.length ? 0 : (r.dueDate && r.dueDate <= end ? N(r.received) : 0));
+      if(r.dueDate && r.dueDate < end) od += Math.max(0, N(r.amount) - paid);
+      col += sum(rc.filter(x => String(x.date||"").slice(0,7) === m), x => N(x.amount)); });
+    return { m, od, col }; });
+}
+function dashTiles(){
+  const cab = cashAtBank(), ro = recvOpen(), po = payOpen(), rTot = sum(ro,outR), pTot = sum(po,outP);
+  const rOver = ro.filter(r => r.dueDate && r.dueDate < T), pSoon = po.filter(p => p.dueDate && days(T,p.dueDate) <= 14);
+  const tOpen = taxOpen(), t30 = tOpen.filter(t => t.dueDate && days(T,t.dueDate) <= 30), tLate = tOpen.filter(t => t.dueDate && t.dueDate < T);
+  const lastAsOf = D.banks.map(b=>b.asOf).filter(Boolean).sort().pop();
+  const ms = monthsBack(6), rh = recvHistory(ms);
+  const fc = D.banks.length ? forecast() : [];
+  const taxPaid = ms.map(m => sum(D.tax.filter(t => t.status === "Paid" && String(t.doneDate||"").slice(0,7) === m), t => N(t.amount)));
+  const F = (D.projects || []).filter(p => D.costs.some(c => c.project === p.name)).map(budgetFigures);
+  const prof = sum(F, f => f.profit), sales = sum(F, f => f.sales);
+  const axis = l => `<div class="spkx"><span>${l[0]}</span><span>${l[1]}</span></div>`;
+  return `<section class="dash">
+    <button class="tile big" data-go="cash"><div class="eyebrow">Cash at bank</div><div class="v">LKR ${fm(cab)}</div>
+      <div class="s">${D.banks.length ? `${D.banks.length} accounts · latest balance ${fdate(lastAsOf)}` : (notReady("banks") ? "Loading…" : "Add your bank accounts")}</div>
+      ${fc.length ? `${spark(fc.map(m => m.close), { w:320, h:54 })}${axis(["Now", "12-month outlook · " + fc[fc.length-1].label])}` : ""}</button>
+    <button class="tile" data-go="recv"><div class="eyebrow">Receivable</div><div class="v">${fmM(rTot)}</div>
+      <div class="s">${ro.length} open · <span style="color:${rOver.length ? "var(--bad)" : "inherit"}">${fmM(sum(rOver,outR))} overdue</span></div>
+      ${spark(rh.map(x => x.od), { color:"var(--bad)" })}${axis(["Overdue " + monLbl(ms[0]), monLbl(ms[5])])}
+      <div class="s">Collected in ${monLbl(ms[5])}: <b>${fmM(rh[5].col)}</b> · ${monLbl(ms[4])}: ${fmM(rh[4].col)}</div></button>
+    <button class="tile" data-go="pay"><div class="eyebrow">Payable</div><div class="v">${fmM(pTot)}</div>
+      <div class="s">${po.length} open bill${po.length===1?"":"s"} · ${pSoon.length} due in 14 days</div>
+      ${po.length ? "" : `<div class="s" style="margin-top:6px">No open supplier bills recorded</div>`}</button>
+    <button class="tile" data-go="tax"><div class="eyebrow">Tax due in 30 days</div><div class="v">${fmM(sum(t30, t => N(t.amount)))}</div>
+      <div class="s">${t30.length} item${t30.length===1?"":"s"}${tLate.length ? ` · <span style="color:var(--bad)">${tLate.length} overdue</span>` : ""}</div>
+      ${spark(taxPaid, { bars:true, color:"var(--warn)" })}${axis(["Paid " + monLbl(ms[0]), monLbl(ms[5])])}</button>
+    <button class="tile" data-go="pay" data-csub2="analysis"><div class="eyebrow">Projects · forecast profit</div><div class="v">${fmM(prof)}</div>
+      <div class="s">${sales ? (prof/sales*100).toFixed(1) + "% of sales value" : "Add project budgets"}</div>
+      <div class="pbars">${F.map(f => `<div><span>${esc(f.name)}</span><i style="width:${Math.max(2, Math.min(100, f.used))}%;background:${f.var < -1 ? "var(--bad)" : "var(--good)"}"></i><em>${f.used.toFixed(0)}%</em></div>`).join("")}</div>
+      <div class="s">Bars: share of each budget spent</div></button>
+  </section>`;
+}
+/* ---------- grouped alerts with actions ---------- */
+function homeAlerts(){
+  const ro = recvOpen(), po = payOpen(), tOpen = taxOpen().sort((a,b)=>(a.dueDate||"").localeCompare(b.dueDate||""));
+  const rOver = ro.filter(r => r.dueDate && r.dueDate < T), pSoon = po.filter(p => p.dueDate && days(T,p.dueDate) <= 14);
+  const tLate = tOpen.filter(t => t.dueDate && t.dueDate < T), tNext = tOpen.filter(t => t.dueDate && t.dueDate >= T && days(T,t.dueDate) <= 30);
+  const fc = D.banks.length ? forecast() : [], low = fc.length ? fc.reduce((a,m) => m.close < a.close ? m : a, fc[0]) : null;
+  const stale = D.banks.filter(b => !b.asOf || days(b.asOf, T) > 7);
+  const loanDue = []; D.loans.forEach(l => { if(l.status==="Settled") return; const r = loanSched(l).rows.find(x => x.date >= T); if(r && days(T,r.date) <= 14) loanDue.push([l,r]); });
+  const over = (D.projects || []).filter(p => D.costs.some(c => c.project === p.name)).map(budgetFigures).filter(f => f.var < -1);
+  const A = []; const w = canWrite && db;
+  const act = (l, attrs, primary) => ({ l, attrs, primary });
+  if(rOver.length){ const cust = new Set(rOver.map(r => r.customer)).size;
+    A.push({ g:"urgent", sev:"bad", t:`${rOver.length} customer instalment${rOver.length>1?"s":""} overdue`, d:`LKR ${fm(sum(rOver,outR))} from ${cust} customer${cust>1?"s":""}`, go:"recv", f:"overdue",
+      acts:[act("Send reminders",'data-act="remind"',1), act("Open list",'data-go="recv" data-f="overdue"')] }); }
+  if(tLate.length) A.push({ g:"urgent", sev:"bad", t:`${tLate.length} tax item${tLate.length>1?"s":""} past the due date`, d:tLate.slice(0,3).map(t => `${t.item}${N(t.amount) ? " · " + fmM(N(t.amount)) : ""}`).join(" · "), go:"tax", f:"upcoming",
+      acts:[ ...(w ? [act(`Record payment: ${tLate[0].item.replace(/ – .*/,"")}`, `data-edit="tax:${esc(tLate[0].id)}"`, 1)] : []), act("All tax items",'data-go="tax" data-f="upcoming"')] });
+  if(low && low.close < 0) A.push({ g:"urgent", sev:"bad", t:`Cash goes negative in ${low.label}`, d:`Projected closing balance LKR ${fm(low.close)}`, go:"cash", acts:[act("Cash outlook",'data-go="cash"',1)] });
+  if(over.length) A.push({ g:"urgent", sev:"bad", t:`${over.length} project${over.length>1?"s":""} forecast over budget`, d:over.map(f => `${f.name} by ${fmM(-f.var)}`).join(" · "), go:"pay", acts:[act("Budget analysis",'data-go="pay" data-csub2="analysis"',1)] });
+  if(loanDue.length) A.push({ g:"week", sev:"warn", t:`Loan payment due ${fdate(loanDue[0][1].date)}`, d:`${loanDue[0][0].name}: LKR ${fm(loanDue[0][1].payment)}`, go:"reports", f:"loans", acts:[act("Loans",'data-go="reports" data-f="loans"',1)] });
+  if(pSoon.length) A.push({ g:"week", sev:"warn", t:`${pSoon.length} supplier payment${pSoon.length>1?"s":""} due within 14 days`, d:`LKR ${fm(sum(pSoon,outP))}`, go:"pay", f:"open", acts:[act("Open bills",'data-go="pay" data-f="open"',1)] });
+  if(tNext.length) A.push({ g:"week", sev:"warn", t:`Next tax deadline: ${tNext[0].item}`, d:`${fdate(tNext[0].dueDate)}${N(tNext[0].amount) ? " · LKR " + fm(N(tNext[0].amount)) : ""}${tNext.length>1?` · ${tNext.length-1} more in the next 30 days`:""}`, go:"tax", f:"upcoming",
+      acts:[act("Open",`data-edit="tax:${esc(tNext[0].id)}"`,1), act("All tax items",'data-go="tax" data-f="upcoming"')] });
+  if(stale.length) A.push({ g:"house", sev:"warn", t:`${stale.length} bank balance${stale.length>1?"s":""} not updated in over a week`, d:stale.slice(0,4).map(b=>b.name).join(" · "), go:"cash",
+      acts:[ ...(w && assetsNS ? [act("Photograph statement",'data-act="scanbank"',1)] : []), act("Cash & banks",'data-go="cash"')] });
+  { const pm = mPrev(T.slice(0,7)); if(Number(T.slice(8,10)) >= 10 && D.periods && loadedPeriods && !isClosed(pm) && D.banks.length) A.push({ g:"house", sev:"warn", t:`${mName(pm)} not closed yet`, d:"Work through the month-end checklist and close the month", go:"reports", f:"close", acts:[act("Open month-end",'data-go="reports" data-f="close"',1), act("Monthly pack",'data-go="reports" data-f="pack"')] }); }
+  { const oq = (D.periods || []).reduce((t,p) => t + (p.queries || []).filter(q => !q.done).length, 0); if(oq){ const pm = (D.periods || []).filter(p => (p.queries||[]).some(q => !q.done)).map(p => p.id).sort()[0]; A.push({ g:"house", sev:"warn", t:`${oq} month-end quer${oq>1?"ies":"y"} open`, d:`Oldest in ${mName(pm)}`, go:"reports", f:"close", acts:[act("Open queries",'data-go="reports" data-f="close"',1)] }); } }
+  if(!A.length) return D.banks.length ? `<section class="stack"><h3>Needs attention</h3><div class="alert good"><span class="bar"></span><span><span class="t">Nothing needs attention</span><span class="d">No overdue items and no deadlines in the next two weeks</span></span></div></section>` : "";
+  const G = [["urgent","Urgent"],["week","Coming up"],["house","Housekeeping"]];
+  return `<section class="stack"><div class="spread"><h3>Needs attention</h3>${chip(A.length + " item" + (A.length>1?"s":""), A.some(a => a.sev === "bad") ? "bad" : "warn")}</div>
+    ${G.filter(([k]) => A.some(a => a.g === k)).map(([k,l]) => `<div class="agrp"><div class="eyebrow">${l}</div><div class="alerts">${A.filter(a => a.g === k).map(a => `
+      <div class="alert ${a.sev}"><span class="bar"></span><div style="flex:1;min-width:0">
+        <button class="alink" data-go="${a.go}" ${a.f ? `data-f="${a.f}"` : ""}><span class="t">${esc(a.t)}</span><span class="d">${esc(a.d)}</span></button>
+        <div class="aacts">${a.acts.map(x => `<button class="btn small${x.primary ? " primary" : ""}" ${x.attrs}>${esc(x.l)}</button>`).join("")}</div></div></div>`).join("")}</div></div>`).join("")}
+  </section>`;
+}
+/* payment reminder messages for overdue customers */
+function remindSheet(){
+  const rOver = recvOpen().filter(r => r.dueDate && r.dueDate < T), by = {};
+  rOver.forEach(r => { const k = (r.customer||"Customer") + "|" + (r.project||"") + "|" + (r.unit||""); (by[k] = by[k] || []).push(r); });
+  const msgs = Object.entries(by).map(([k, rs]) => { const [c, p, u] = k.split("|"), tot = sum(rs, outR);
+    return { c, p, u, tot, text:`Dear ${c},\n\nThis is a friendly reminder from Nexus Property Developers that the following payment${rs.length>1?"s are":" is"} now overdue for ${p ? p + " " : ""}apartment ${u}:\n${rs.sort((a,b)=>a.dueDate.localeCompare(b.dueDate)).map(r => `• ${r.ref || "Instalment"} due ${fdate(r.dueDate)} – LKR ${fm(outR(r))}`).join("\n")}\n\nTotal overdue: LKR ${fm(tot)}.\n\nPlease arrange payment at your earliest convenience, or contact us if you have already paid. Thank you.\n\nNexus Property Developers (Pvt) Ltd` }; })
+    .sort((a,b) => b.tot - a.tot);
+  ui._rem = msgs;
+  $("#sheetroot").innerHTML = `<div class="sheet-bg" id="sheetbg"><div class="sheet" role="dialog" aria-modal="true" aria-label="Payment reminders">
+    <div class="spread"><h3 style="margin:0">Payment reminders · ${msgs.length} customer${msgs.length>1?"s":""}</h3><button class="btn small" type="button" data-act="close">Close</button></div>
+    <p class="note" style="margin:0">One message per customer and apartment, largest first. Copy one and paste it into WhatsApp, SMS or email.</p>
+    <div class="list" style="display:flex">${msgs.map((m,i) => `<div class="item" style="display:block;cursor:default"><div class="spread"><div><div class="t">${esc(m.c)}</div><div class="d">${esc([m.p, m.u].filter(Boolean).join(" "))}</div></div><div class="amt">LKR ${fm(m.tot)}</div></div>
+      <textarea readonly rows="5" id="rem${i}" style="width:100%;box-sizing:border-box;margin-top:8px;border:1px solid var(--line);background:var(--surface-2);color:var(--fg);border-radius:10px;padding:8px;font:13px inherit">${esc(m.text)}</textarea>
+      <div class="row" style="margin-top:6px"><button class="btn small primary" type="button" data-act="remcopy" data-i="${i}">Copy message</button></div></div>`).join("")}</div>
+  </div></div>`;
+  sheet = { col:"_rem" }; if(typeof hostPlace === "function") hostPlace();
+}
+async function copyText(t, el){
+  try{ await navigator.clipboard.writeText(t); toast("Copied"); return; }catch(e){}
+  try{ if(el){ el.focus(); el.select(); if(document.execCommand("copy")){ toast("Copied"); return; } } }catch(e){}
+  toast("Select the text and copy it");
+}
+/* ---------- search ---------- */
+function searchIndex(){
+  const out = [], add = (kind, label, sub, attrs, extra) => out.push({ kind, label, sub, attrs, hay:(label + " " + sub + " " + (extra||"")).toLowerCase() });
+  const byUnit = {}; D.recv.forEach(r => { const k = r.project + "|" + r.unit + "|" + r.customer; (byUnit[k] = byUnit[k] || []).push(r); });
+  Object.values(byUnit).forEach(rs => { const r = rs[0], o = sum(rs, outR), od = sum(rs.filter(x => x.dueDate && x.dueDate < T), outR);
+    const nos = rs.flatMap(x => (x.receipts || []).map(y => y.no)).filter(Boolean).join(" ");
+    const first = rs.slice().sort((a,b) => outR(b) - outR(a))[0];
+    add("Customer", r.customer || "Customer", `${r.project} ${r.unit} · ${rs.length} instalments · LKR ${fm(o)} outstanding${od ? ` · ${fm(od)} overdue` : ""}`, `data-edit="recv:${esc(first.id)}"`, nos + " " + rs.map(x => x.ref).join(" ")); });
+  D.units.forEach(u => add("Unit", `${u.project} ${u.unit}`, `${u.status || "Available"}${u.customer ? " · " + u.customer : ""}${u.sqft ? " · " + fm(N(u.sqft)) + " sq.ft" : ""}`, `data-edit="units:${esc(u.id)}"`));
+  (D.book65 || []).forEach(b => add("Booking", `65 St Lawrence ${b.unit} · ${b.customer || ""}`, `${b.status}${b.contact ? " · " + b.contact : ""}`, `data-edit="book65:${esc(b.id)}"`, b.email));
+  (D.leads65 || []).forEach(l => add("Enquiry", l.customer || "Enquiry", `${l.status || "New"}${l.contact ? " · " + l.contact : ""}${l.preference ? " · " + l.preference : ""}`, `data-edit="leads65:${esc(l.id)}"`, l.email));
+  D.pay.forEach(p => add("Supplier bill", `${p.supplier} · ${p.ref || ""}`, `${p.project || ""} · LKR ${fm(N(p.amount))}${outP(p) ? ` · ${fm(outP(p))} unpaid` : " · paid"}`, `data-edit="pay:${esc(p.id)}"`));
+  D.tax.forEach(t => add("Tax", t.item, `${t.status} · due ${fdate(t.dueDate)}${N(t.amount) ? " · LKR " + fm(N(t.amount)) : ""}`, `data-edit="tax:${esc(t.id)}"`, t.ref));
+  D.banks.forEach(b => add("Bank", b.name, `LKR ${fm(N(b.balance))} at ${fdate(b.asOf)}`, `data-edit="banks:${esc(b.id)}"`, b.accountNo));
+  (D.vat || []).forEach(v => (v.in || []).forEach(l => add("VAT invoice", `${l.s} · ${l.ref || ""}`, `${mName(v.id)} input VAT · ${fdate(l.d)} · VAT ${fm(N(l.vat))}`, `data-act="gosrchvat" data-m="${esc(v.id)}"`)));
+  D.costs.forEach(c => (c.items || []).forEach(i => add("Cost line", `${c.project} · ${i.line ? i.line + " " : ""}${i.item}`, `Budget ${fm(N(i.amount))}${i.actual != null ? ` · spent ${fm(N(i.actual))}` : ""}`, `data-act="gosrchcost" data-p="${esc(c.project)}"`, (i.ledger || []).map(x => x.item).join(" "))));
+  return out;
+}
+function searchResults(q){
+  q = String(q || "").trim().toLowerCase(); if(q.length < 2) return `<p class="note" style="margin:0">Type a customer, unit (e.g. 4.1 or 8A), receipt or invoice number, supplier, tax item or bank.</p>`;
+  const words = q.split(/\s+/), idx = ui._srch || (ui._srch = searchIndex());
+  const hits = idx.filter(x => words.every(w => x.hay.includes(w))).slice(0, 40);
+  if(!hits.length) return `<p class="note" style="margin:0">Nothing found for "${esc(q)}".</p>`;
+  return `<div class="list" style="display:flex">${hits.map(h => `<button class="item" ${h.attrs}><div><div class="t">${esc(h.label)}</div><div class="d">${esc(h.sub)}</div></div><div class="amt">${chip(h.kind)}</div></button>`).join("")}</div>`;
+}
+function openSearch(){
+  ui._srch = null;
+  $("#sheetroot").innerHTML = `<div class="sheet-bg" id="sheetbg"><div class="sheet" role="dialog" aria-modal="true" aria-label="Search">
+    <div class="spread"><h3 style="margin:0">Search</h3><button class="btn small" type="button" data-act="close">Close</button></div>
+    <input id="srchq" type="search" autocomplete="off" placeholder="Customer, unit, receipt no., supplier, tax…" style="width:100%;box-sizing:border-box;border:1px solid var(--line);background:var(--surface-2);color:var(--fg);border-radius:10px;padding:12px;font-size:16px">
+    <div id="srchres">${searchResults("")}</div></div></div>`;
+  sheet = { col:"_search" }; if(typeof hostPlace === "function") hostPlace();
+  setTimeout(() => { const i = $("#srchq"); if(i) i.focus(); }, 30);
+}
+/* ---------- budget charts ---------- */
+function budgetGroupChart(f){
+  const G = f.groups.filter(x => x.budget || x.actual); if(!G.length) return "";
+  const mx = Math.max(...G.map(x => Math.max(x.budget, x.actual)), 1);
+  return `<section class="card stack"><div class="spread"><h3>Budget against spent, by cost group</h3><div class="chart-legend"><span><i style="background:var(--surface-2);outline:1px solid var(--muted)"></i>Budget</span><span><i style="background:var(--good)"></i>Spent</span><span><i style="background:var(--bad)"></i>Spent above budget</span></div></div>
+    <div class="gbars">${G.map(x => `<div class="gb"><div class="gl">${esc(x.g)}</div><div class="gt"><span class="b" style="width:${x.budget/mx*100}%"></span><span class="a" style="width:${Math.min(x.actual, x.budget)/mx*100}%"></span>${x.actual > x.budget ? `<span class="o" style="left:${x.budget/mx*100}%;width:${(x.actual-x.budget)/mx*100}%"></span>` : ""}</div><div class="gv">${fmM(x.actual)} / ${fmM(x.budget)}</div></div>`).join("")}</div></section>`;
+}
+function costCurve(list){
+  // list: [{name, budget, rows:[{m,a}], color}]
+  list = list.filter(x => Array.isArray(x.rows) && x.rows.length); if(!list.length) return "";
+  const ms = [...new Set(list.flatMap(x => x.rows.map(r => r.m)))].sort();
+  const wide = window.innerWidth > 1000 && document.documentElement.classList.contains("nx-wide");
+  const W = wide ? 1240 : 680, H = wide ? 300 : 230, L = 56, R = 14, Tp = 18, B = 26;
+  const cum = list.map(x => { let c = 0; const map = {}; x.rows.forEach(r => map[r.m] = N(r.a)); return ms.map(m => (c += map[m] || 0)); });
+  const mx = Math.max(...list.map(x => x.budget || 0), ...cum.map(c => c[c.length-1]), 1) * 1.05;
+  const x = i => L + (W-L-R) * (ms.length === 1 ? 0.5 : i/(ms.length-1)), y = v => Tp + (H-Tp-B) * (1 - v/mx);
+  let g = ""; for(let i = 0; i <= 4; i++){ const v = mx*i/4; g += `<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="var(--muted)">${fmM(v)}</text>`; }
+  let lb = ""; const step = Math.ceil(ms.length / 8); ms.forEach((m,i) => { if(i % step && i !== ms.length-1) return; lb += `<text x="${x(i)}" y="${H-6}" text-anchor="middle" font-size="11" fill="var(--muted)">${monLbl(m)} ${m.slice(2,4)}</text>`; });
+  const lines = list.map((s,k) => `${s.budget ? `<line x1="${L}" x2="${W-R}" y1="${y(s.budget)}" y2="${y(s.budget)}" stroke="${s.color}" stroke-dasharray="5 4" opacity=".7"/><text x="${k % 2 ? L + 6 : W-R}" y="${y(s.budget)-4}" text-anchor="${k % 2 ? "start" : "end"}" font-size="11" fill="${s.color}">${esc(s.name)} budget ${fmM(s.budget)}</text>` : ""}
+    <polyline points="${cum[k].map((v,i) => `${x(i)},${y(v)}`).join(" ")}" fill="none" stroke="${s.color}" stroke-width="2.5" stroke-linejoin="round"/>`).join("");
+  const mon = list.length === 1 ? (() => { const s = list[0], map = {}; s.rows.forEach(r => map[r.m] = N(r.a)); const mm = Math.max(...ms.map(m => map[m] || 0), 1), bw = Math.max(2, (W-L-R)/ms.length - 2);
+    return ms.map((m,i) => `<rect x="${x(i) - bw/2}" y="${H - B - (map[m]||0)/mm * (H-Tp-B) * 0.35}" width="${bw}" height="${(map[m]||0)/mm * (H-Tp-B) * 0.35}" fill="${s.color}" opacity=".25"/>`).join(""); })() : "";
+  return `<section class="card stack"><div class="spread"><h3>Cost curve · cumulative spend</h3><div class="chart-legend">${list.map(s => `<span><i class="ln" style="background:${s.color}"></i>${esc(s.name)}</span>`).join("")}<span><i class="ln" style="background:var(--muted)"></i>Dashed: budget</span></div></div>
+    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Cumulative actual cost by month">${g}${mon}${lines}${lb}</svg>
+    <p class="note" style="margin:0">${list.filter(s => { const v = s.rows.map(r => N(r.a)).sort((a,b)=>a-b), med = v[Math.floor(v.length/2)] || 0; return N(s.rows[0].a) > 5 * Math.max(med, 1); }).map(s => `${esc(s.name)}'s first month (${monLbl(s.rows[0].m)} ${s.rows[0].m.slice(0,4)}) includes ${fmM(N(s.rows[0].a))} of earlier costs, mainly land. `).join("")}${list.map((s,k) => { const r = s.rows, last3 = r.slice(-3), avg = sum(last3, z => N(z.a)) / Math.max(1, last3.length); return `${esc(s.name)}: ${fmM(cum[k][cum[k].length-1])} spent to ${fdate(mEnd(r[r.length-1].m))}, average ${fmM(avg)} a month over the last 3 months`; }).join(" · ")}${list.length === 1 ? ". Shaded bars: spend in each month." : "."}</p></section>`;
+}
+/* ---------- monthly pack ---------- */
+function packData(m){
+  const end = mEnd(m), ms = monthsBack(6);
+  const ro = recvOpen(), rOver = ro.filter(r => r.dueDate && r.dueDate < T);
+  const ag = agingOf(ro, outR), byP = {}; ro.forEach(r => { byP[r.project] = (byP[r.project] || 0) + outR(r); });
+  const coll = {}; D.recv.forEach(r => (r.receipts || []).forEach(x => { if(String(x.date||"").slice(0,7) === m) coll[r.project] = (coll[r.project] || 0) + N(x.amount); }));
+  const top = {}; rOver.forEach(r => { const k = r.customer + "|" + r.project + " " + r.unit; top[k] = (top[k] || 0) + outR(r); });
+  const per = periodOf(m) || {}, checks = per.checks || {};
+  const F = (D.projects || []).filter(p => D.costs.some(c => c.project === p.name)).map(budgetFigures);
+  const nm = mNext(m), taxRows = D.tax.filter(t => (t.dueDate || "").slice(0,7) === nm || (t.dueDate || "").slice(0,7) === m || (t.status !== "Paid" && t.status !== "Filed" && t.dueDate && t.dueDate < T)).sort((a,b) => (a.dueDate||"").localeCompare(b.dueDate||""));
+  return { m, end, ag, byP, coll, top:Object.entries(top).sort((a,b) => b[1]-a[1]).slice(0,10), per, checks, F, taxRows, vat:vatDoc(m), rTot:sum(ro,outR), rOverTot:sum(rOver,outR) };
+}
+function packHTML(m){
+  const P = packData(m), t = P.vat ? vatTotals(P.vat) : null, cf = P.per.cashflow;
+  const tb = (head, rows, foot) => `<table class="pk"><thead><tr>${head.map((h,i) => `<th${i ? ' class="r"' : ""}>${h}</th>`).join("")}</tr></thead><tbody>${rows.map(r => `<tr>${r.map((c,i) => `<td${i ? ' class="r"' : ""}>${c}</td>`).join("")}</tr>`).join("")}</tbody>${foot ? `<tfoot><tr>${foot.map((c,i) => `<td${i ? ' class="r"' : ""}>${c}</td>`).join("")}</tr></tfoot>` : ""}</table>`;
+  const bk = D.banks.slice().sort((a,b) => N(b.balance) - N(a.balance));
+  const qs = (P.per.queries || []), openQ = qs.filter(q => !q.done);
+  const b65 = (D.book65 || []).filter(b => b.status !== "Cancelled");
+  return `<div class="pack">
+  <div class="pk-cover"><div class="pk-mark">N</div><div><div class="pk-org">Nexus Property Developers (Pvt) Ltd</div><h1>Monthly management pack · ${mName(m)}</h1><div class="pk-sub">Prepared ${fdate(T)} from the Nexus Finance Desk · all amounts in LKR</div></div></div>
+  <div class="pk-kpis"><div><span>Cash at bank</span><b>${fm(cashAtBank())}</b></div><div><span>Owed by customers</span><b>${fm(P.rTot)}</b></div><div><span>Of which overdue</span><b>${fm(P.rOverTot)}</b></div><div><span>Collected in ${MONL[+m.slice(5)-1]}</span><b>${fm(sum(Object.values(P.coll), v => v))}</b></div></div>
+  <h2>1. Cash at bank</h2>${tb(["Account","Balance","As at"], bk.map(b => [esc(b.name), fm(N(b.balance)), fdate(b.asOf)]), ["Total", fm(cashAtBank()), ""])}
+  ${cf ? `<h2>2. Cash flow · ${esc(cf.period || mName(m))}</h2>${tb(["", "LKR"], [["Total inflows", fm(N(cf.totalIn))], ["Total outflows", fm(N(cf.totalOut))]], ["Net cash flow", fm(N(cf.net))])}` : `<h2>2. Cash flow</h2><p class="pk-note">No cash flow summary loaded for ${mName(m)}.</p>`}
+  <h2>3. Customer receivables</h2>
+  ${tb(["Ageing","LKR"], [["Not yet due", fm(P.ag[0])], ["1–30 days overdue", fm(P.ag[1])], ["31–60 days", fm(P.ag[2])], ["61–90 days", fm(P.ag[3])], ["Over 90 days", fm(P.ag[4])]], ["Total outstanding", fm(P.rTot)])}
+  ${tb(["Project","Outstanding","Collected in " + MONL[+m.slice(5)-1]], Object.keys(Object.assign({}, P.byP, P.coll)).sort().map(p => [esc(p), fm(P.byP[p] || 0), fm(P.coll[p] || 0)]))}
+  ${P.top.length ? `<h3>Largest overdue balances</h3>${tb(["Customer","Unit","Overdue"], P.top.map(([k,v]) => { const [c,u] = k.split("|"); return [esc(c), esc(u), fm(v)]; }))}` : ""}
+  <h2>4. VAT and SSCL · ${mName(m)}</h2>
+  ${t ? tb(["","LKR"], [["Output VAT on cash received from customers", fm(t.vat)], ["Less input VAT paid to suppliers", "(" + fm(t.ivat) + ")"], ...(t.bf ? [["Less excess input brought forward", "(" + fm(t.bf) + ")"]] : []), ["Net VAT payable", fm(Math.max(0, t.net))], ["SSCL payable (2.5% of value of supply)", fm(t.sscl)]], ["Value of supply (box A)", fm(t.value)]) : `<p class="pk-note">No VAT workings for ${mName(m)} yet.</p>`}
+  <h2>5. Tax deadlines</h2>${P.taxRows.length ? tb(["Item","Due","Amount","Status"], P.taxRows.map(x => [esc(x.item), fdate(x.dueDate), N(x.amount) ? fm(N(x.amount)) : "–", esc(x.status + (x.status !== "Paid" && x.status !== "Filed" && x.dueDate < T ? " · overdue" : ""))])) : `<p class="pk-note">No tax items due.</p>`}
+  <h2>6. Project budgets</h2>${P.F.length ? tb(["Project","Budget","Spent","% spent","Forecast final","Forecast profit"], P.F.map(f => [esc(f.name), fmM(f.budget), fmM(f.spent), f.used.toFixed(0) + "%", fmM(f.eac), `${fmM(f.profit)} (${f.margin.toFixed(1)}%)`])) : `<p class="pk-note">No project budgets loaded.</p>`}
+  <h2>7. Month-end close · ${mName(m)}</h2>
+  <p class="pk-note">Status: <b>${esc(P.per.status || "Open")}</b>${P.per.closedAt ? " · closed " + fdate(String(P.per.closedAt).slice(0,10)) : ""} · checklist ${Object.values(P.checks).filter(c => c && c.done).length} of ${Object.keys(P.checks).length || 0} ticked · ${openQ.length} open quer${openQ.length === 1 ? "y" : "ies"}</p>
+  ${openQ.length ? `<ol class="pk-q">${openQ.map(q => `<li>${esc(q.text)}</li>`).join("")}</ol>` : ""}
+  ${b65.length || (D.leads65 || []).length ? `<h2>8. 65 St Lawrence bookings</h2><p class="pk-note">${b65.filter(b => b.status === "Confirmed").length} confirmed and ${b65.filter(b => b.status === "Neutral").length} neutral of 46 apartments · ${(D.leads65 || []).filter(l => l.status === "New" || l.status === "Following up").length} enquiries open${b65.length ? " · " + b65.map(b => `${esc(b.unit)} ${esc(b.customer)}`).join(", ") : ""}</p>` : ""}
+  <p class="pk-foot">Figures as recorded in the Nexus Finance Desk on ${fdate(T)}. Bank balances are as at the dates shown; budgets are forecast final costs.</p>
+</div>`;
+}
+const PACK_CSS = `.pack{background:#fff;color:#1c2127;font:13px/1.45 "Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;padding:28px;border-radius:12px;max-width:900px;margin:0 auto}
+.pack h1{font-size:22px;margin:2px 0}.pack h2{font-size:15px;margin:22px 0 8px;padding-bottom:4px;border-bottom:2px solid #1c2127}.pack h3{font-size:13px;margin:14px 0 6px}
+.pk-cover{display:flex;gap:14px;align-items:center;border-bottom:3px solid #2e8b47;padding-bottom:14px}.pk-mark{width:44px;height:44px;border-radius:10px;background:#2e8b47;color:#fff;display:grid;place-items:center;font-weight:700;font-size:22px;flex:none}
+.pk-org{font-weight:600;color:#2e8b47}.pk-sub,.pk-note{color:#59636e}.pk-foot{color:#59636e;font-size:11px;margin-top:24px;border-top:1px solid #d6dbe0;padding-top:8px}
+.pk-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}.pk-kpis div{border:1px solid #d6dbe0;border-radius:8px;padding:8px 10px}.pk-kpis span{display:block;font-size:11px;color:#59636e;text-transform:uppercase;letter-spacing:.04em}.pk-kpis b{font-size:16px}
+table.pk{width:100%;border-collapse:collapse;margin:6px 0}table.pk th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#59636e;border-bottom:1px solid #1c2127;padding:5px 6px}
+table.pk td{padding:5px 6px;border-bottom:1px solid #e6e9ec}table.pk .r{text-align:right;white-space:nowrap}table.pk tfoot td{font-weight:700;border-top:1.5px solid #1c2127;border-bottom:none}
+.pk-q{margin:6px 0 0 18px;padding:0}.pk-q li{margin-bottom:4px}
+@media (max-width:600px){.pack{padding:16px}.pk-kpis{grid-template-columns:repeat(2,1fr)}}`;
+function repPack(){
+  if(!ui.packM) ui.packM = mPrev(T.slice(0,7));
+  const m = ui.packM;
+  return `<div class="spread noprint" style="align-items:center"><button class="btn small" data-act="packm" data-m="${mPrev(m)}" aria-label="Previous month">‹</button><h3 style="margin:0">Monthly pack · ${mName(m)}</h3><button class="btn small" data-act="packm" data-m="${mNext(m)}" aria-label="Next month">›</button></div>
+    <div class="row noprint"><button class="btn primary" data-act="packprint">Print / save as PDF</button>${dl ? `<button class="btn" data-act="packdl">Download</button>` : ""}<span class="note">Print gives a clean A4 report; Download saves it as a page you can email or print later.</span></div>
+    <style>${PACK_CSS}</style>${packHTML(m)}`;
+}
+const BODY_OPEN = "<" + "body>", BODY_CLOSE = "</" + "body>";
+async function packDownload(){
+  const m = ui.packM, html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Nexus monthly pack – ${mName(m)}</title><style>body{margin:0;background:#eef1f3;padding:16px}${PACK_CSS}@media print{body{background:#fff;padding:0}.pack{padding:0;max-width:none}}@page{size:A4;margin:14mm}</style></head>${BODY_OPEN}${packHTML(m)}${BODY_CLOSE}</html>`;
+  try{ await dl.save({ filename:`Nexus monthly pack ${mName(m)}.html`, data:new TextEncoder().encode(html) }); }catch(e){ if(!(e && e.code === "declined")) toast("Couldn't prepare the file."); }
+}
+
 /* ---- reports ---- */
 function fyOf(month){ const [y,m] = month.split("-").map(Number); const s = m >= 4 ? y : y-1; return s+"/"+String(s+1).slice(2); }
 function plSum(rows){
   const s = {revenue:0,cos:0,admin:0,selling:0,finance:0,other:0,tax:0}; rows.forEach(r => Object.keys(s).forEach(k => s[k] += N(r[k])));
   s.gp = s.revenue - s.cos; s.op = s.gp - s.admin - s.selling; s.pbt = s.op - s.finance + s.other; s.pat = s.pbt - s.tax; return s;
 }
-const REPS = [["pl","Income statement"],["bs","Balance sheet"],["proj","Projects"],["loans","Loans"],["fc","Forecasts"],["close","Month-end"]];
+const REPS = [["pack","Monthly pack"],["pl","Income statement"],["bs","Balance sheet"],["proj","Projects"],["loans","Loans"],["fc","Forecasts"],["close","Month-end"]];
 function repHead(){
   return `${exampleBanner()}<h2>Reports</h2><div class="seg" role="group" aria-label="Report">${REPS.map(([k,l])=>`<button data-rep="${k}" aria-pressed="${ui.rep===k}">${l}</button>`).join("")}</div>`;
 }
 function viewReports(){
-  return repHead() + ({pl:repPL, bs:repBS, proj:repProj, loans:repLoans, fc:() => viewForecasts().replace("<h2>Forecasts</h2>",""), close:repClose}[ui.rep] || repPL)();
+  return repHead() + ({pl:repPL, bs:repBS, proj:repProj, loans:repLoans, fc:() => viewForecasts().replace("<h2>Forecasts</h2>",""), close:repClose, pack:repPack}[ui.rep] || repPL)();
 }
 function repPL(){
   const rows = D.pl.filter(r => r.month).slice().sort((a,b)=>a.month.localeCompare(b.month));
@@ -1691,6 +1945,8 @@ function budgetProject(f){
   return `${budgetKpis(f.budget, f.spent, f.eac, `${f.sqft ? "LKR " + fm(f.budget/f.sqft) + " per sq.ft · " : ""}${f.asOf ? "actual to " + fdate(f.asOf) : "no actuals yet"}`)}
   <section class="card stack"><div class="spread"><h3>Cost progress</h3>${BLEGEND}</div>
     <div class="stack" style="gap:4px"><div class="spread"><b>${esc(f.name)}</b>${vchip(f.var)}</div>${budgetBar(f)}<div class="note">${fmM(f.spent)} spent · ${fmM(f.toComplete)} to complete · budget ${fmM(f.budget)} · forecast profit ${fmM(f.profit)} (${f.margin.toFixed(1)}%)</div></div></section>
+  ${budgetGroupChart(f)}
+  ${costCurve([{ name:f.name, budget:f.budget, rows:f.p.costMonthly, color:"var(--accent)" }])}
   ${G.length ? `<section class="stack"><h3>By cost group</h3><div class="card" style="padding:0"><div class="scroll"><table class="qt bt"><thead><tr><th>Cost group</th><th>Budget</th><th>% of total</th><th>Per sq.ft</th><th>Spent</th><th>% used</th><th>Forecast final</th><th>Variance</th></tr></thead><tbody>
     ${G.map(x => `<tr><td>${esc(x.g)}</td><td>${fm(x.budget)}</td><td>${f.budget ? (x.budget/f.budget*100).toFixed(1) : 0}%</td><td>${f.sqft ? fm(x.budget/f.sqft) : "–"}</td><td>${x.actual ? fm(x.actual) : "–"}</td><td>${usedChip(x.actual, x.budget)}</td><td>${fm(x.eac)}</td><td>${varTxt(x.budget - x.eac)}</td></tr>`).join("")}
     <tr class="tot"><td>Total</td><td>${fm(f.budget)}</td><td>100%</td><td>${f.sqft ? fm(f.budget/f.sqft) : "–"}</td><td>${fm(f.spent)}</td><td>${usedChip(f.spent, f.budget)}</td><td>${fm(f.eac)}</td><td>${varTxt(f.var)}</td></tr>
@@ -1757,6 +2013,7 @@ function viewBudget(){
   <section class="card stack"><div class="spread"><h3>Cost progress</h3>${BLEGEND}</div>
     ${F.map(f => `<div class="stack" style="gap:4px"><div class="spread"><button class="linkbtn" data-bsub="${esc(f.name)}"><b>${esc(f.name)}</b> <span class="note">›</span></button>${vchip(f.var)}</div>${budgetBar(f)}<div class="note">${fmM(f.spent)} spent${f.asOf ? " to " + fdate(f.asOf) : ""}${f.committed?` · ${fmM(f.committed)} committed`:""} · ${fmM(f.toComplete)} to complete · budget ${fmM(f.budget)} · ${f.used.toFixed(0)}% spent</div></div>`).join("")}
   </section>
+  ${costCurve(F.map((f,k) => ({ name:f.name, budget:f.budget, rows:f.p.costMonthly, color:["var(--accent)","var(--brass)","#5aa9e6"][k % 3] })))}
   <section class="stack"><h3>Project comparison</h3><div class="card" style="padding:0"><div class="scroll"><table class="qt bt"><thead><tr><th>LKR</th>${F.map(f => `<th><button class="linkbtn" data-bsub="${esc(f.name)}">${esc(f.name)} ›</button></th>`).join("")}</tr></thead><tbody>
     ${row("Sales value (sold + unsold at list price)", f => fmM(f.sales))}
     ${row("Units sold", f => f.units ? `${f.sold} / ${f.units}` : "–")}
@@ -2139,6 +2396,7 @@ function openForm(col, id, preset){
   setTimeout(()=>{ const first = $("#sheetform input, #sheetform select"); if(first && !rec) first.focus(); }, 30);
 }
 function closeSheet(){ $("#sheetroot").innerHTML = ""; sheet = null; render(); }
+function closeSheetSilently(){ $("#sheetroot").innerHTML = ""; sheet = null; }
 function readForm(){
   const sc = S[sheet.col], form = $("#sheetform"), out = {};
   for(const f of sc.fields){
@@ -2359,7 +2617,7 @@ document.addEventListener("click", e => {
   const t = e.target.closest("button, tr[data-edit]"); if(!t) return;
   const d = t.dataset;
   if(d.tab){ if(d.tab === "reports" && ui.view === "reports"){ ui.proj = null; } go(d.tab); return; }
-  if(d.go){ go(d.go, d.f); return; }
+  if(d.go){ if(sheet && (sheet.col === "_search" || sheet.col === "_rem")) closeSheetSilently(); if(d.csub2){ ui.cSub = d.csub2; } go(d.go, d.f); return; }
   if(d.p65s){ ui.p65 = d.p65s; render(); window.scrollTo(0,0); return; }
   if(d.ffs){ ui.ffs = d.ffs; render(); window.scrollTo(0,0); return; }
   if(d.fsec){ ui.fsec = d.fsec; render(); window.scrollTo(0,0); return; }
@@ -2409,6 +2667,15 @@ document.addEventListener("click", e => {
     case "exno": render(); return;
     case "data": openData(); return;
     case "importnow": importNow(); return;
+    case "search": openSearch(); return;
+    case "remind": remindSheet(); return;
+    case "remcopy": { const i = +t.dataset.i, m = (ui._rem || [])[i]; if(m) copyText(m.text, $("#rem" + i)); return; }
+    case "scanbank": closeSheetSilently(); scanUI.kind = "bank"; go("home"); setTimeout(() => { const c = $("#scan-cam"); if(c) c.click(); }, 60); return;
+    case "gosrchvat": closeSheetSilently(); ui.tSub = "vat"; ui.vatM = t.dataset.m; go("tax"); return;
+    case "gosrchcost": closeSheetSilently(); ui.cSub = "analysis"; ui.bSub = t.dataset.p; go("pay"); return;
+    case "packm": ui.packM = t.dataset.m; render(); return;
+    case "packprint": try{ window.print(); }catch(e){ toast("Printing isn't available here. Use Download instead."); } return;
+    case "packdl": packDownload(); return;
     case "layout": ls.set("nx-layout2", document.documentElement.classList.contains("nx-wide") ? "mobile" : "wide"); applyLayout(); render(); return;
     case "vatm": ui.vatM = t.dataset.m; ui.vatPaste.msg = ""; render(); return;
     case "vatpopen": ui.vatPaste.open = true; ui.vatPaste.msg = ""; render(); setTimeout(() => { const a = $("#vatpaste"); if(a) a.focus(); }, 30); return;
@@ -2442,7 +2709,7 @@ document.addEventListener("change", e => {
   if(e.target.id === "imp-col"){ imp = null; const o = $("#imp-out"); if(o) o.innerHTML = ""; }
   if(sheet && sheet.col === "units" && e.target.closest("#sheetform")) previewSchedule();
 });
-document.addEventListener("input", e => { if(e.target.id === "vatpaste"){ ui.vatPaste.text = e.target.value; return; } if(e.target.id === "scannote"){ scanUI.note = e.target.value; return; } if(sheet && sheet.col === "units" && e.target.closest("#sheetform")){ clearTimeout(previewSchedule.t); previewSchedule.t = setTimeout(previewSchedule, 250); } });
+document.addEventListener("input", e => { if(e.target.id === "srchq"){ const r = $("#srchres"); if(r) r.innerHTML = searchResults(e.target.value); return; } if(e.target.id === "vatpaste"){ ui.vatPaste.text = e.target.value; return; } if(e.target.id === "scannote"){ scanUI.note = e.target.value; return; } if(sheet && sheet.col === "units" && e.target.closest("#sheetform")){ clearTimeout(previewSchedule.t); previewSchedule.t = setTimeout(previewSchedule, 250); } });
 document.addEventListener("submit", e => { if(e.target.id === "sheetform"){ e.preventDefault(); save(); } });
 document.addEventListener("keydown", e => { if(e.key === "Escape" && sheet) closeSheet(); });
 const _schedRun = schedAfter.run;
