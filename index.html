@@ -544,7 +544,7 @@ function projStats(p){
   if(us.length){ s.units = us.length; s.sold = us.filter(isSold).length; s.salesValue = sum(us.filter(isSold), unitPrice); s.stock = sum(us.filter(u=>!isSold(u)), unitPrice); s.auto.units = 1; }
   else { s.units = N(p.units); s.sold = N(p.unitsSold); s.salesValue = N(p.salesValue); }
   if(rv.length){ s.collected = sum(rv, r => N(r.received)); s.auto.collected = 1; } else s.collected = N(p.collected);
-  if(cl.length){ s.budget = sum(cl, c=>N(c.budget)); s.cost = sum(cl, c=>N(c.actual)); s.committed = sum(cl, c=>N(c.committed)); s.auto.cost = 1; }
+  if(cl.length){ s.budget = sum(cl, c=>N(c.budget)); s.cost = sum(cl, c=>N(c.actual)) || N(p.costToDate); s.costFromProject = !sum(cl, c=>N(c.actual)) && !!N(p.costToDate); s.committed = sum(cl, c=>N(c.committed)); s.auto.cost = 1; }
   else { s.budget = N(p.budget); s.cost = N(p.costToDate); s.committed = 0; }
   if(ln.length){ s.facility = sum(ln, l=>N(l.facility)); s.loanOut = sum(ln, l=>loanOutstanding(l)); s.auto.loan = 1; }
   else { s.facility = N(p.loanFacility); s.loanOut = N(p.loanOutstanding); }
@@ -1599,12 +1599,61 @@ function budgetFigures(p){
   f.toComplete = Math.max(0, f.eac - f.spent - f.committed);
   f.sales = (s.salesValue + (s.stock || 0)) || N(p.salesValue);
   f.soldValue = s.salesValue || 0;
-  f.sqft = sum(us, u => N(u.sqft)) || N(p.sqft);
+  f.sqft = N(p.sqft) || sum(us, u => N(u.sqft));
   f.profit = f.sales - f.eac; f.margin = f.sales ? f.profit / f.sales * 100 : 0;
   f.perSqft = f.sqft ? f.eac / f.sqft : 0;
   f.collected = s.collected; f.loanOut = s.loanOut || 0;
   f.units = s.units; f.sold = s.sold;
   return f;
+}
+function budgetLines(f){ const L = f.lines.filter(c => Array.isArray(c.items) && c.items.length).sort((a,b) => N(b.budget) - N(a.budget)), tot = sum(f.lines, c => N(c.budget));
+    return `<section class="stack"><h3>Line by line</h3>
+    <div class="list" style="display:flex">${L.map(c => { const groups = {}; c.items.forEach(i => (groups[i.group || ""] = groups[i.group || ""] || []).push(i));
+      return `<details class="item" style="display:block;cursor:pointer"><summary class="spread" style="list-style:none"><span><b>${esc(c.head)}</b> <span class="note">· ${c.items.length} line${c.items.length>1?"s":""}</span></span><span><b>${fmM(N(c.budget))}</b> <span class="note">${tot ? (N(c.budget)/tot*100).toFixed(1) : 0}%</span></span></summary>
+        <div class="stmt one" style="margin-top:8px;font-size:13px">${Object.entries(groups).map(([g, it]) => `${g && Object.keys(groups).length > 1 ? `<div class="hd"><span>${esc(g)}</span><span>${fm(sum(it, i => N(i.amount)))}</span></div>` : ""}${it.map(i => `<div class="ind"><span>${esc(i.line ? i.line + " · " : "")}${esc(i.item)}</span><span>${fm(N(i.amount))}</span></div>`).join("")}`).join("")}</div>
+        ${f.sqft ? `<p class="note" style="margin:6px 0 0">LKR ${fm(N(c.budget)/f.sqft)} per sellable sq.ft</p>` : ""}</details>`; }).join("")}</div>
+    ${f.lines.some(c => !(Array.isArray(c.items) && c.items.length)) ? `<p class="note" style="margin:0">Not in the estimate: ${f.lines.filter(c => !(Array.isArray(c.items) && c.items.length)).map(c => `${esc(c.head)} ${fmM(N(c.budget))}`).join(", ")}.</p>` : ""}</section>`; }
+
+/* line-by-line comparison across projects (matched on line number, or name when there is none) */
+function budgetCompare(F){
+  const per = ui.bPer === "sqft", rows = {}, ord = [];
+  F.forEach((f, k) => f.lines.forEach(c => (Array.isArray(c.items) ? c.items : []).forEach(it => {
+    const key = it.line ? "L" + it.line : "N" + String(it.item).toLowerCase();
+    if(!rows[key]){ rows[key] = { line: it.line, item: it.item, group: it.group || c.head, head: c.head, v: F.map(() => 0) }; ord.push(key); }
+    rows[key].v[k] += N(it.amount); })));
+  if(!ord.length) return `<div class="card note">Line items appear here once each project's cost report is loaded by line.</div>`;
+  const groups = []; ord.sort((a,b) => (rows[a].line||999) - (rows[b].line||999)).forEach(k => { const g = rows[k].group; let G = groups.find(x => x.g === g); if(!G){ G = { g, keys: [] }; groups.push(G); } G.keys.push(k); });
+  const val = (v, f) => !v ? `<span class="note">–</span>` : per ? (f.sqft ? fm(v / f.sqft) : "–") : fm(v);
+  const last = F.length - 1, bench = F.slice(0, last);
+  const chg = r => { const ps = bench.filter((f,k) => r.v[k] && f.sqft).map(f => r.v[F.indexOf(f)] / f.sqft); if(!ps.length || !r.v[last] || !F[last].sqft) return ""; const avg = ps.reduce((a,b)=>a+b,0)/ps.length, d = (r.v[last]/F[last].sqft - avg)/avg*100;
+    const r0 = Math.round(d); return `<span class="${d > 25 ? "neg" : ""}">${r0 > 0 ? "+" : ""}${r0 === 0 ? 0 : r0}%</span>`; };
+  const tot = F.map((f,k) => sum(ord, key => rows[key].v[k]));
+  return `<div class="spread"><p class="note" style="margin:0">${per ? "LKR per sellable sq.ft" : "LKR"} · ${F.map(f => `${esc(f.name)} ${fm(f.sqft)} sq.ft`).join(" · ")}</p>${subSeg("bper", per ? "sqft" : "lkr", [["lkr","LKR"],["sqft","Per sq.ft"]])}</div>
+  <div class="card" style="padding:0"><div class="scroll"><table class="qt bt"><thead><tr><th>Cost line</th>${F.map(f => `<th>${esc(f.name)}</th>`).join("")}<th title="${esc(F[last].name)} per sq.ft against the average of the others">vs others /sq.ft</th></tr></thead><tbody>
+    ${groups.map(G => `<tr class="tot"><td>${esc(G.g)}</td>${F.map((f,k) => `<td>${val(sum(G.keys, key => rows[key].v[k]), f)}</td>`).join("")}<td></td></tr>
+      ${G.keys.map(key => { const r = rows[key]; return `<tr><td>${r.line ? r.line + " · " : ""}${esc(r.item)}</td>${F.map((f,k) => `<td>${val(r.v[k], f)}</td>`).join("")}<td>${chg(r)}</td></tr>`; }).join("")}`).join("")}
+    <tr class="tot"><td>Total development cost</td>${F.map((f,k) => `<td>${val(tot[k], f)}</td>`).join("")}<td></td></tr>
+  </tbody></table></div></div>
+  <p class="note" style="margin:0">Last column: ${esc(F[last].name)}'s cost per sq.ft against the average of ${bench.map(f => esc(f.name)).join(" and ")} for the same line; red where more than 25% higher.</p>`;
+}
+function budgetProject(f){
+  const tot = sum(f.lines, c => N(c.budget)), L = f.lines.slice().sort((a,b) => N(b.budget) - N(a.budget));
+  return `<section class="hero" style="border-left-color:${f.var < -1 ? "var(--bad)" : "var(--good)"}">
+    <div class="eyebrow">${esc(f.name)} · cost budget</div><div class="big">LKR ${fm(f.budget)}</div>
+    <div class="meta">${f.sqft ? `LKR ${fm(f.budget/f.sqft)} per sellable sq.ft (${fm(f.sqft)} sq.ft) · ` : ""}${f.heads} cost heads · forecast profit ${fmM(f.profit)} (${f.margin.toFixed(1)}%)</div></section>
+  <section class="kpis">
+    <div class="kpi"><div class="eyebrow">Spent to date</div><div class="v">${fmM(f.spent)}</div><div class="s">${f.used.toFixed(0)}% of budget${f.s.costFromProject ? " · project total" : ""}</div></div>
+    <div class="kpi"><div class="eyebrow">To complete</div><div class="v">${fmM(f.toComplete)}</div><div class="s">forecast final ${fmM(f.eac)}</div></div>
+    <div class="kpi"><div class="eyebrow">Sales value</div><div class="v">${fmM(f.sales)}</div><div class="s">${f.units ? `${f.sold} of ${f.units} units sold` : ""}</div></div>
+    <div class="kpi"><div class="eyebrow">Collected</div><div class="v">${fmM(f.collected)}</div><div class="s">from buyers</div></div>
+  </section>
+  ${f.lines.length ? `<section class="stack"><h3>By cost head</h3><div class="card" style="padding:0"><div class="scroll"><table class="qt bt"><thead><tr><th>Cost head</th><th>Budget</th><th>% of total</th><th>Per sq.ft</th><th>Spent</th><th>Forecast final</th><th>Variance</th></tr></thead><tbody>
+    ${L.map(c => { const e = eac(c), v = N(c.budget) - e; return `<tr${canWrite ? ` class="click" data-edit="costs:${esc(c.id)}"` : ""}><td>${esc(c.head)}</td><td>${fm(N(c.budget))}</td><td>${tot ? (N(c.budget)/tot*100).toFixed(1) : 0}%</td><td>${f.sqft ? fm(N(c.budget)/f.sqft) : "–"}</td><td>${N(c.actual) ? fm(N(c.actual)) : "–"}</td><td>${fm(e)}</td><td class="${v < -1 ? "neg" : ""}">${Math.abs(v) < 1 ? "–" : (v < 0 ? "(" + fm(-v) + ")" : fm(v))}</td></tr>`; }).join("")}
+    <tr class="tot"><td>Total</td><td>${fm(tot)}</td><td>100%</td><td>${f.sqft ? fm(tot/f.sqft) : "–"}</td><td>${fm(f.spent)}</td><td>${fm(f.eac)}</td><td class="${f.var < -1 ? "neg" : ""}">${Math.abs(f.var) < 1 ? "–" : (f.var < 0 ? "(" + fm(-f.var) + ")" : fm(f.var))}</td></tr>
+  </tbody></table></div></div>
+  ${f.s.costFromProject ? `<p class="note" style="margin:0">Spent to date is the project total (${fmM(f.spent)}) from the project record; it isn't split by cost head yet.</p>` : ""}</section>` : `<div class="card note">No cost lines for ${esc(f.name)} yet.</div>`}
+  ${f.lines.some(c => Array.isArray(c.items) && c.items.length) ? budgetLines(f) : ""}
+  ${f.p.note ? `<p class="note">${esc(f.p.note)}</p>` : ""}`;
 }
 function viewBudget(){
   if(notReady("projects") || notReady("costs")) return loadingList();
@@ -1612,6 +1661,11 @@ function viewBudget(){
   const P = D.projects.slice().sort((a,b) => (order.indexOf(a.name)+99*(order.indexOf(a.name)<0)) - (order.indexOf(b.name)+99*(order.indexOf(b.name)<0)));
   if(!P.length) return emptyState("No projects yet.","projects");
   const F = P.map(budgetFigures);
+  const subs = [["overview","Overview"]].concat(F.map(f => [f.name, f.name])).concat([["compare","Line comparison"]]);
+  const bs = subs.some(x => x[0] === ui.bSub) ? ui.bSub : "overview";
+  const bseg = subSeg("bsub", bs, subs);
+  if(bs === "compare") return bseg + `<h3>Line-by-line comparison</h3>` + budgetCompare(F);
+  if(bs !== "overview") return bseg + budgetProject(F.find(f => f.name === bs));
   const T_ = k => sum(F, f => f[k]);
   const tb = T_("budget"), te = T_("eac"), ts = T_("spent"), tc = T_("committed");
   const vchip = v => Math.abs(v) < 1 ? chip("On budget","good") : v > 0 ? chip("Under " + fmM(v),"good") : chip("Over " + fmM(-v),"bad");
@@ -1637,7 +1691,7 @@ function viewBudget(){
   const cell = (f, h) => { const c = f.lines.filter(x => x.head === h); if(!c.length) return `<span class="note">–</span>`;
     const b = sum(c, x=>N(x.budget)), a = sum(c, x=>N(x.actual)+N(x.committed)), e = sum(c, eac), u = b ? a/b*100 : 0;
     return `${fmM(b)}<div class="note">${fmM(a)} used · ${u.toFixed(0)}%${Math.abs(b-e) >= 1 ? ` · ${b-e<0?"over":"under"} ${fmM(Math.abs(b-e))}` : ""}</div>`; };
-  return `
+  return `${bseg}
   <section class="kpis">
     <div class="kpi"><div class="eyebrow">Total cost budget</div><div class="v">${fmM(tb)}</div><div class="s">${F.length} projects</div></div>
     <div class="kpi"><div class="eyebrow">Spent + committed</div><div class="v">${fmM(ts+tc)}</div><div class="s">${tb ? ((ts+tc)/tb*100).toFixed(0) : 0}% of budget</div></div>
@@ -1645,7 +1699,7 @@ function viewBudget(){
     <div class="kpi"><div class="eyebrow">Forecast vs budget</div><div class="v" style="color:${tb-te<-1?"var(--bad)":"var(--good)"}">${Math.abs(tb-te)<1?"On budget":(tb-te<0?"−":"+")+fmM(Math.abs(tb-te))}</div><div class="s">${tb-te<-1?"over budget":Math.abs(tb-te)<1?"no overrun forecast":"under budget"}</div></div>
   </section>
   <section class="card stack"><div class="spread"><h3>Cost progress</h3><div class="chart-legend"><span><i style="background:var(--good)"></i>Spent</span><span><i style="background:var(--warn)"></i>Committed</span><span><i style="background:var(--surface-2);outline:1px dashed var(--muted)"></i>To complete</span><span><i class="ln" style="background:var(--fg)"></i>Budget</span></div></div>
-    ${F.map(f => `<div class="stack" style="gap:4px"><div class="spread"><b>${esc(f.name)}</b><span>${vchip(f.var)}</span></div>${bar(f)}<div class="note">${fmM(f.spent)} spent${f.committed?` · ${fmM(f.committed)} committed`:""} · ${fmM(f.toComplete)} to complete · budget ${fmM(f.budget)} · ${f.used.toFixed(0)}% used</div></div>`).join("")}
+    ${F.map(f => `<div class="stack" style="gap:4px"><div class="spread"><b>${esc(f.name)}${f.s.costFromProject ? ` <span class="note" style="font-weight:400">· spent = project total</span>` : ""}</b><span>${vchip(f.var)}</span></div>${bar(f)}<div class="note">${fmM(f.spent)} spent${f.committed?` · ${fmM(f.committed)} committed`:""} · ${fmM(f.toComplete)} to complete · budget ${fmM(f.budget)} · ${f.used.toFixed(0)}% used</div></div>`).join("")}
   </section>
   <section class="stack"><h3>Project comparison</h3><div class="card" style="padding:0"><div class="scroll"><table class="qt bt"><thead><tr><th>LKR</th>${F.map(f => `<th>${esc(f.name)}</th>`).join("")}</tr></thead><tbody>
     ${row("Sales value (sold + unsold at list price)", f => fmM(f.sales))}
@@ -1669,13 +1723,6 @@ function viewBudget(){
   ${heads.length ? `<section class="stack"><h3>By cost head</h3><div class="card" style="padding:0"><div class="scroll"><table class="qt bt"><thead><tr><th>Budget · used</th>${F.map(f => `<th>${esc(f.name)}</th>`).join("")}</tr></thead><tbody>
     ${heads.map(h => `<tr><td>${esc(h)}</td>${F.map(f => `<td>${cell(f,h)}</td>`).join("")}</tr>`).join("")}
   </tbody></table></div></div></section>` : ""}
-  ${F.filter(f => f.lines.some(c => Array.isArray(c.items) && c.items.length)).map(f => { const L = f.lines.filter(c => Array.isArray(c.items) && c.items.length).sort((a,b) => N(b.budget) - N(a.budget)), tot = sum(f.lines, c => N(c.budget));
-    return `<section class="stack"><h3>${esc(f.name)} · estimate line by line</h3>
-    <div class="list" style="display:flex">${L.map(c => { const groups = {}; c.items.forEach(i => (groups[i.group || ""] = groups[i.group || ""] || []).push(i));
-      return `<details class="item" style="display:block;cursor:pointer"><summary class="spread" style="list-style:none"><span><b>${esc(c.head)}</b> <span class="note">· ${c.items.length} line${c.items.length>1?"s":""}</span></span><span><b>${fmM(N(c.budget))}</b> <span class="note">${tot ? (N(c.budget)/tot*100).toFixed(1) : 0}%</span></span></summary>
-        <div class="stmt one" style="margin-top:8px;font-size:13px">${Object.entries(groups).map(([g, it]) => `${g && Object.keys(groups).length > 1 ? `<div class="hd"><span>${esc(g)}</span><span>${fm(sum(it, i => N(i.amount)))}</span></div>` : ""}${it.map(i => `<div class="ind"><span>${esc(i.line ? i.line + " · " : "")}${esc(i.item)}</span><span>${fm(N(i.amount))}</span></div>`).join("")}`).join("")}</div>
-        ${f.sqft ? `<p class="note" style="margin:6px 0 0">LKR ${fm(N(c.budget)/f.sqft)} per sellable sq.ft</p>` : ""}</details>`; }).join("")}</div>
-    ${f.lines.some(c => !(Array.isArray(c.items) && c.items.length)) ? `<p class="note" style="margin:0">Not in the estimate: ${f.lines.filter(c => !(Array.isArray(c.items) && c.items.length)).map(c => `${esc(c.head)} ${fmM(N(c.budget))}`).join(", ")}.</p>` : ""}</section>`; }).join("")}
   <section class="stack"><div class="spread"><h3>Points to watch</h3>${flags.filter(x=>x[0]==="bad").length ? chip(flags.filter(x=>x[0]==="bad").length + " over budget","bad") : chip("Nothing over budget","good")}</div>
     ${flags.length ? `<div class="list">${flags.map(x => `<div class="item" style="cursor:default;border-left:3px solid ${ico[x[0]]}"><div><div class="d" style="color:var(--fg)">${esc(x[1])}</div></div></div>`).join("")}</div>` : ""}
   </section>
@@ -2228,6 +2275,8 @@ document.addEventListener("click", e => {
   if(d.bf){ ui.bF = d.bf; render(); return; }
   if(d.ssub){ ui.sSub = d.ssub; ui.proj = null; render(); window.scrollTo(0,0); return; }
   if(d.csub){ ui.cSub = d.csub; ui.proj = null; render(); window.scrollTo(0,0); return; }
+  if(d.bsub){ ui.bSub = d.bsub; render(); return; }
+  if(d.bper){ ui.bPer = d.bper; render(); return; }
   if(d.cm){ ui.cm = d.cm === "-" ? null : d.cm; render(); window.scrollTo(0,0); return; }
   if(d.ck){ toggleCheck(d.ck); return; }
   if(d.q){ toggleQuery(d.q); return; }
