@@ -25,6 +25,25 @@ html,body{margin:0;background:#1f242b;color:#f4f6f8}
 #nxbar{position:fixed;left:0;right:0;bottom:calc(58px + env(safe-area-inset-bottom,0px));z-index:8;display:flex;justify-content:center;pointer-events:none}
 #nxbar div{pointer-events:auto;background:#2b323b;color:#9aa3ad;font:12.5px "Segoe UI",system-ui,sans-serif;border-radius:999px;padding:5px 12px;margin-bottom:8px;box-shadow:0 2px 8px rgba(0,0,0,.3)}
 #nxbar button{background:none;border:0;color:#3fb950;font:inherit;font-weight:600;cursor:pointer;padding:0 0 0 8px}
+#nxbar .sep{color:#4a535e;padding-left:8px}
+/* Full screen: use the whole width of a computer screen */
+html.nx-wide main,html.nx-wide .top-in,html.nx-wide nav.tabs .in{max-width:min(1600px,100%)}
+html.nx-wide main{padding-inline:clamp(16px,3vw,40px);gap:22px}
+html.nx-wide .top-in{padding-inline:clamp(16px,3vw,40px)}
+html.nx-wide .hero .big{font-size:clamp(30px,3vw,44px)}
+html.nx-wide .kpis .v{font-size:clamp(20px,1.8vw,28px)}
+@media (min-width:1100px){
+  html.nx-wide .ugrid{grid-template-columns:repeat(6,minmax(0,1fr))}
+  html.nx-wide .g65{max-width:900px}
+  html.nx-wide .list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  html.nx-wide .list>*{border-right:1px solid var(--line)}
+  html.nx-wide .qt td:first-child,html.nx-wide .qt th:first-child{max-width:340px}
+}
+@media (min-width:1500px){html.nx-wide .list{grid-template-columns:repeat(3,minmax(0,1fr))}}
+/* Mobile view: a phone-width column, even on a large screen */
+html.nx-mobile main,html.nx-mobile .top-in,html.nx-mobile nav.tabs .in{max-width:440px}
+html.nx-mobile .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+html.nx-mobile .ugrid{grid-template-columns:repeat(2,minmax(0,1fr))}
 </style>
 <script>
 /* Directors' view: stands in for the Claude data connection with a password-locked, read-only copy of the data. */
@@ -58,6 +77,15 @@ html,body{margin:0;background:#1f242b;color:#f4f6f8}
   window.claude = { use: async name => { const D = await dataP; if(name === "db") return makeDb(D); if(name === "user") return user; return null; } };
 
   function asAt(D){ const s = (D.at || "").slice(0,10); if(!s) return ""; const [y,m,d] = s.split("-").map(Number); return `${d} ${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][m-1]} ${y}`; }
+  /* layout: "wide" (full screen) or "mobile"; default full screen on screens 900px and wider */
+  function layout(){ const v = store.get("nx-dir-layout") || (window.innerWidth >= 900 ? "wide" : "mobile");
+    document.documentElement.classList.toggle("nx-wide", v === "wide"); document.documentElement.classList.toggle("nx-mobile", v === "mobile"); return v; }
+  function setLayout(v){ store.set("nx-dir-layout", v); layout(); drawBar(); window.dispatchEvent(new Event("resize")); }
+  let barD = null;
+  function drawBar(){ if(!barD) return; const v = layout(), bar = document.getElementById("nxbar");
+    bar.innerHTML = `<div>Directors' view · figures as at ${asAt(barD)}<span class="sep">|</span><button type="button" id="nxlay">${v === "wide" ? "Mobile view" : "Full screen"}</button><span class="sep">|</span><button type="button" id="nxout">Lock</button></div>`; bar.hidden = false;
+    document.getElementById("nxout").onclick = lock; document.getElementById("nxlay").onclick = () => setLayout(v === "wide" ? "mobile" : "wide"); }
+  layout();
   function lock(){ store.del("nx-dir-pw"); location.reload(); }
   async function open(pw, remember){
     const err = document.getElementById("nxerr"), btn = document.getElementById("nxgo");
@@ -66,9 +94,7 @@ html,body{margin:0;background:#1f242b;color:#f4f6f8}
       const D = await decrypt(pw);
       if(remember) store.set("nx-dir-pw", pw);
       document.getElementById("nxlock").remove();
-      const bar = document.getElementById("nxbar");
-      bar.innerHTML = `<div>Directors' view · figures as at ${asAt(D)}<button type="button" id="nxout">Lock</button></div>`; bar.hidden = false;
-      document.getElementById("nxout").onclick = lock;
+      barD = D; drawBar();
       ready(D);
       setTimeout(() => { const t = document.getElementById("synctxt"); if(t) t.textContent = "View only"; }, 800);
     }catch(e){
