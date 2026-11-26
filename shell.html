@@ -47,6 +47,25 @@ html.nx-wide .kpis .v{font-size:clamp(20px,1.8vw,28px)}
 html.nx-mobile main,html.nx-mobile .top-in,html.nx-mobile nav.tabs .in{max-width:440px}
 html.nx-mobile .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
 html.nx-mobile .ugrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+/* Light mode for the lock screen and the directors' bar */
+html[data-theme="light"],html[data-theme="light"] body{background:#f3f5f7;color:#1c2127}
+html[data-theme="light"] #nxlock{background:#f3f5f7}
+html[data-theme="light"] #nxlock form{background:#fff;box-shadow:0 1px 3px rgba(16,24,32,.08)}
+html[data-theme="light"] #nxlock .sub,html[data-theme="light"] #nxlock label{color:#5d6874}
+html[data-theme="light"] #nxlock input[type=password]{background:#f3f5f7;color:#1c2127;border-color:#dde2e7}
+html[data-theme="light"] #nxbar div{background:#fff;color:#5d6874;box-shadow:0 2px 8px rgba(16,24,32,.15)}
+html[data-theme="light"] #nxbar button{color:#23803d}
+html[data-theme="light"] #nxbar .sep{color:#c3cad1}
+@media (prefers-color-scheme: light){
+  html[data-theme="auto"],html[data-theme="auto"] body{background:#f3f5f7;color:#1c2127}
+  html[data-theme="auto"] #nxlock{background:#f3f5f7}
+  html[data-theme="auto"] #nxlock form{background:#fff;box-shadow:0 1px 3px rgba(16,24,32,.08)}
+  html[data-theme="auto"] #nxlock .sub,html[data-theme="auto"] #nxlock label{color:#5d6874}
+  html[data-theme="auto"] #nxlock input[type=password]{background:#f3f5f7;color:#1c2127;border-color:#dde2e7}
+  html[data-theme="auto"] #nxbar div{background:#fff;color:#5d6874;box-shadow:0 2px 8px rgba(16,24,32,.15)}
+  html[data-theme="auto"] #nxbar button{color:#23803d}
+  html[data-theme="auto"] #nxbar .sep{color:#c3cad1}
+}
 </style>
 <script>
 /* Directors' view: stands in for the Claude data connection with a password-locked, read-only copy of the data. */
@@ -86,9 +105,11 @@ html.nx-mobile .ugrid{grid-template-columns:repeat(2,minmax(0,1fr))}
   function setLayout(v){ store.set("nx-dir-layout2", v); layout(); drawBar(); window.dispatchEvent(new Event("resize")); }
   let barD = null;
   function drawBar(){ if(!barD) return; const v = layout(), bar = document.getElementById("nxbar");
-    bar.innerHTML = `<div><span class="lbl">Directors' view · </span>figures as at ${asAt(barD)}<span class="sep">|</span><button type="button" id="nxlay">${v === "wide" ? "Mobile view" : "Full screen"}</button><span class="sep">|</span><button type="button" id="nxout">Lock</button></div>`; bar.hidden = false;
-    document.getElementById("nxout").onclick = lock; document.getElementById("nxlay").onclick = () => setLayout(v === "wide" ? "mobile" : "wide"); }
+    bar.innerHTML = `<div><span class="lbl">Directors' view · </span>figures as at ${asAt(barD)}<span class="sep">|</span><button type="button" id="nxlay">Display</button><span class="sep">|</span><button type="button" id="nxout">Lock</button></div>`; bar.hidden = false;
+    document.getElementById("nxout").onclick = lock; document.getElementById("nxlay").onclick = () => { const b = document.getElementById("dispbtn"); if(b) b.click(); else setLayout(v === "wide" ? "mobile" : "wide"); }; }
+  window.nxDir = { getLayout: () => store.get("nx-dir-layout2") || "wide", setLayout };
   layout();
+  try{ document.documentElement.setAttribute("data-theme", localStorage.getItem("nx-theme") || "dark"); }catch(e){}
   function lock(){ store.del("nx-dir-pw"); location.reload(); }
   async function open(pw, remember){
     const err = document.getElementById("nxerr"), btn = document.getElementById("nxgo");

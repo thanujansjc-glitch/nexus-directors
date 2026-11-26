@@ -47,6 +47,25 @@ html.nx-wide .kpis .v{font-size:clamp(20px,1.8vw,28px)}
 html.nx-mobile main,html.nx-mobile .top-in,html.nx-mobile nav.tabs .in{max-width:440px}
 html.nx-mobile .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
 html.nx-mobile .ugrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+/* Light mode for the lock screen and the directors' bar */
+html[data-theme="light"],html[data-theme="light"] body{background:#f3f5f7;color:#1c2127}
+html[data-theme="light"] #nxlock{background:#f3f5f7}
+html[data-theme="light"] #nxlock form{background:#fff;box-shadow:0 1px 3px rgba(16,24,32,.08)}
+html[data-theme="light"] #nxlock .sub,html[data-theme="light"] #nxlock label{color:#5d6874}
+html[data-theme="light"] #nxlock input[type=password]{background:#f3f5f7;color:#1c2127;border-color:#dde2e7}
+html[data-theme="light"] #nxbar div{background:#fff;color:#5d6874;box-shadow:0 2px 8px rgba(16,24,32,.15)}
+html[data-theme="light"] #nxbar button{color:#23803d}
+html[data-theme="light"] #nxbar .sep{color:#c3cad1}
+@media (prefers-color-scheme: light){
+  html[data-theme="auto"],html[data-theme="auto"] body{background:#f3f5f7;color:#1c2127}
+  html[data-theme="auto"] #nxlock{background:#f3f5f7}
+  html[data-theme="auto"] #nxlock form{background:#fff;box-shadow:0 1px 3px rgba(16,24,32,.08)}
+  html[data-theme="auto"] #nxlock .sub,html[data-theme="auto"] #nxlock label{color:#5d6874}
+  html[data-theme="auto"] #nxlock input[type=password]{background:#f3f5f7;color:#1c2127;border-color:#dde2e7}
+  html[data-theme="auto"] #nxbar div{background:#fff;color:#5d6874;box-shadow:0 2px 8px rgba(16,24,32,.15)}
+  html[data-theme="auto"] #nxbar button{color:#23803d}
+  html[data-theme="auto"] #nxbar .sep{color:#c3cad1}
+}
 </style>
 <script>
 /* Directors' view: stands in for the Claude data connection with a password-locked, read-only copy of the data. */
@@ -86,9 +105,11 @@ html.nx-mobile .ugrid{grid-template-columns:repeat(2,minmax(0,1fr))}
   function setLayout(v){ store.set("nx-dir-layout2", v); layout(); drawBar(); window.dispatchEvent(new Event("resize")); }
   let barD = null;
   function drawBar(){ if(!barD) return; const v = layout(), bar = document.getElementById("nxbar");
-    bar.innerHTML = `<div><span class="lbl">Directors' view · </span>figures as at ${asAt(barD)}<span class="sep">|</span><button type="button" id="nxlay">${v === "wide" ? "Mobile view" : "Full screen"}</button><span class="sep">|</span><button type="button" id="nxout">Lock</button></div>`; bar.hidden = false;
-    document.getElementById("nxout").onclick = lock; document.getElementById("nxlay").onclick = () => setLayout(v === "wide" ? "mobile" : "wide"); }
+    bar.innerHTML = `<div><span class="lbl">Directors' view · </span>figures as at ${asAt(barD)}<span class="sep">|</span><button type="button" id="nxlay">Display</button><span class="sep">|</span><button type="button" id="nxout">Lock</button></div>`; bar.hidden = false;
+    document.getElementById("nxout").onclick = lock; document.getElementById("nxlay").onclick = () => { const b = document.getElementById("dispbtn"); if(b) b.click(); else setLayout(v === "wide" ? "mobile" : "wide"); }; }
+  window.nxDir = { getLayout: () => store.get("nx-dir-layout2") || "wide", setLayout };
   layout();
+  try{ document.documentElement.setAttribute("data-theme", localStorage.getItem("nx-theme") || "dark"); }catch(e){}
   function lock(){ store.del("nx-dir-pw"); location.reload(); }
   async function open(pw, remember){
     const err = document.getElementById("nxerr"), btn = document.getElementById("nxgo");
@@ -144,13 +165,30 @@ html.nx-mobile .ugrid{grid-template-columns:repeat(2,minmax(0,1fr))}
 <style>
 /* Layout: phone-first app shell — sticky header, single scrolling column (max 760px), fixed bottom tab bar, bottom-sheet editor */
 /* Always-dark "market ticker" palette: charcoal-navy background, white figures, red/green movement colours */
-:root,:root[data-theme="light"],:root[data-theme="dark"]{
+:root{
+  --f-display:"Familjen Grotesk","Segoe UI",system-ui,sans-serif;
+  --f-body:"Public Sans","Segoe UI",system-ui,-apple-system,sans-serif;
+}
+/* Appearance: dark (default), light, or auto (follows the device) — chosen in Display settings */
+:root,:root[data-theme="dark"]{
   --bg:#1f242b; --surface:#252b33; --surface-2:#2b323b; --line:#161a1f; --fg:#f4f6f8; --muted:#9aa3ad;
   --accent:#3fb950; --accent-ink:#0d1a10; --accent-soft:#1f3a26; --brass:#d6a74c;
   --good:#3fb950; --good-soft:#1c3324; --warn:#e3a33b; --warn-soft:#3a2d16; --bad:#ef5f56; --bad-soft:#3f2224;
   --shadow:none; color-scheme:dark;
-  --f-display:"Familjen Grotesk","Segoe UI",system-ui,sans-serif;
-  --f-body:"Public Sans","Segoe UI",system-ui,-apple-system,sans-serif;
+}
+:root[data-theme="light"]{
+  --bg:#f3f5f7; --surface:#ffffff; --surface-2:#eef1f4; --line:#dde2e7; --fg:#1c2127; --muted:#5d6874;
+  --accent:#23803d; --accent-ink:#ffffff; --accent-soft:#e2f2e6; --brass:#9a6e14;
+  --good:#23803d; --good-soft:#e2f2e6; --warn:#a8650f; --warn-soft:#fbf0dc; --bad:#c9372e; --bad-soft:#fbe6e4;
+  --shadow:0 1px 2px rgba(16,24,32,.06); color-scheme:light;
+}
+@media (prefers-color-scheme: light){
+  :root[data-theme="auto"]{
+    --bg:#f3f5f7; --surface:#ffffff; --surface-2:#eef1f4; --line:#dde2e7; --fg:#1c2127; --muted:#5d6874;
+    --accent:#23803d; --accent-ink:#ffffff; --accent-soft:#e2f2e6; --brass:#9a6e14;
+    --good:#23803d; --good-soft:#e2f2e6; --warn:#a8650f; --warn-soft:#fbf0dc; --bad:#c9372e; --bad-soft:#fbe6e4;
+    --shadow:0 1px 2px rgba(16,24,32,.06); color-scheme:light;
+  }
 }
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.45;font-variant-numeric:tabular-nums;-webkit-tap-highlight-color:transparent}
@@ -362,7 +400,11 @@ html.nx-wide .kpis .v{font-size:clamp(20px,1.8vw,28px)}
 html.nx-mobile main,html.nx-mobile .top-in,html.nx-mobile nav.tabs .in{max-width:440px}
 html.nx-mobile .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
 html.nx-mobile .ugrid{grid-template-columns:repeat(2,minmax(0,1fr))}
-#laybtn svg{width:20px;height:20px}
+html.nx-mobile .dash{grid-template-columns:repeat(2,minmax(0,1fr))}
+html.nx-mobile .asm{grid-template-columns:minmax(0,1fr);gap:2px}
+html.nx-mobile .top .sub{display:none}
+html.nx-mobile .sync span:last-child{display:none}
+
 /* Inside the Claude phone app the page is shown at full length and scrolled from outside, so "fixed" bars are placed by script (html.nx-host) */
 html.nx-host nav.tabs,html.nx-host .fab,html.nx-host .sheet-bg,html.nx-host .toast{position:absolute}
 html.nx-host .top{position:relative;top:0}
@@ -381,7 +423,7 @@ html.nx-host .toast{bottom:auto}
   <div class="tools">
     <div class="sync" id="sync"><span class="dot" id="syncdot"></span><span id="synctxt">Connecting…</span></div>
     <button class="iconbtn" type="button" data-act="search" aria-label="Search" title="Search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></button>
-    <button class="iconbtn" type="button" id="laybtn" data-act="layout" hidden></button>
+    <button class="iconbtn" type="button" id="dispbtn" data-act="display" aria-label="Display: light, dark or phone view" title="Display"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor"/></svg></button>
     <button class="iconbtn" type="button" data-act="data" aria-label="Import and export with Excel" title="Import / export Excel"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 17v3h16v-3"/></svg></button>
   </div>
 </div></header>
@@ -422,12 +464,34 @@ function applyLayout(){
   if(layoutOwnedByPage()) return;
   const v = ls.get("nx-layout2") || "wide", h = document.documentElement;
   h.classList.toggle("nx-wide", v === "wide"); h.classList.toggle("nx-mobile", v === "mobile");
-  const b = document.getElementById("laybtn"); if(!b) return;
-  b.hidden = window.innerWidth < 700;   // phones are always phone width
-  b.innerHTML = v === "wide" ? LAY_MOB : LAY_FULL;
-  b.title = v === "wide" ? "Mobile view" : "Full screen"; b.setAttribute("aria-label", b.title);
 }
 applyLayout(); window.addEventListener("resize", applyLayout);
+/* appearance: "dark" (default), "light" or "auto" (follow the device) */
+const themeNow = () => ls.get("nx-theme") || "dark";
+function applyTheme(){
+  const v = themeNow(); document.documentElement.setAttribute("data-theme", v);
+  const light = v === "light" || (v === "auto" && window.matchMedia && matchMedia("(prefers-color-scheme: light)").matches);
+  let m = document.querySelector('meta[name="theme-color"]'); if(!m){ m = document.createElement("meta"); m.name = "theme-color"; document.head.appendChild(m); }
+  m.content = light ? "#f3f5f7" : "#1f242b";
+  try{ window.dispatchEvent(new CustomEvent("nx-theme", { detail:{ theme:v, light } })); }catch(e){}
+}
+applyTheme(); try{ matchMedia("(prefers-color-scheme: light)").addEventListener("change", applyTheme); }catch(e){}
+const layoutNow = () => window.nxDir && window.nxDir.getLayout ? window.nxDir.getLayout() : (ls.get("nx-layout2") || "wide");
+function setLayoutMode(v){ if(window.nxDir && window.nxDir.setLayout) window.nxDir.setLayout(v); else { ls.set("nx-layout2", v); applyLayout(); } }
+function displaySheet(){
+  const t = themeNow(), l = layoutNow(), small = window.innerWidth < 700;
+  const opt = (act, val, cur, label) => `<button type="button" data-act="${act}" data-v="${val}" aria-pressed="${cur === val}">${label}</button>`;
+  $("#sheetroot").innerHTML = `<div class="sheet-bg" id="sheetbg"><div class="sheet" role="dialog" aria-modal="true" aria-label="Display">
+    <div class="spread"><h3 style="margin:0">Display</h3><button class="btn small" type="button" data-act="close">Close</button></div>
+    <div class="stack"><div class="eyebrow">Appearance</div>
+      <div class="seg">${opt("settheme","light",t,"Light mode")}${opt("settheme","dark",t,"Dark mode")}${opt("settheme","auto",t,"Same as device")}</div></div>
+    <div class="stack"><div class="eyebrow">Layout</div>
+      <div class="seg">${opt("setlayout","wide",l,"Full screen")}${opt("setlayout","mobile",l,"Phone mode")}</div>
+      ${small ? '<p class="note" style="margin:0">On a phone the app always fits the screen; this choice matters on a computer or tablet.</p>' : '<p class="note" style="margin:0">Phone mode shows a phone-width column, even on a large screen.</p>'}</div>
+    <p class="note" style="margin:0">Saved on this device only.</p>
+  </div></div>`;
+  sheet = { col:"_display" }; if(typeof hostPlace === "function") hostPlace();
+}
 const sum = (arr, f) => arr.reduce((s,x) => s + f(x), 0);
 
 /* ---------- 65 St Lawrence apartments (architect's draft plan) ---------- */
@@ -601,7 +665,7 @@ const outP = p => Math.max(0, N(p.amount) - N(p.paid));
 const cashAtBank = () => sum(D.banks, b => N(b.balance));
 const recvOpen = () => D.recv.filter(r => outR(r) > 0.5);
 const payOpen = () => D.pay.filter(p => outP(p) > 0.5);
-const taxOpen = () => D.tax.filter(t => t.status !== "Paid" && !(t.status === "Filed" && !N(t.amount)));
+const taxOpen = () => D.tax.filter(t => t.status !== "Paid" && t.status !== "Filed");
 const examples = () => COLS.reduce((n,c) => n + D[c].filter(x => x.example).length, 0);
 const unitPrice = u => N(u.price) || N(u.sqft) * N(u.pricePerSqft);
 const isSold = u => u.status === "Booked" || u.status === "Sold";
@@ -652,7 +716,7 @@ function forecast(){
   const idx = s => { if(!s) return 0; const i = raw(s); return i < 0 ? 0 : i; };
   D.recv.forEach(r => { const o = outR(r); if(o>0 && r.dueDate){ const i = idx(r.dueDate); if(i<12) M[i].inn += o; }});
   D.pay.forEach(p => { const o = outP(p); if(o>0){ const i = idx(p.dueDate); if(i<12) M[i].out += o; }});
-  D.tax.forEach(t => { if(t.status !== "Paid" && N(t.amount) > 0){ const i = idx(t.dueDate); if(i<12) M[i].out += N(t.amount); }});
+  D.tax.forEach(t => { if(t.status !== "Paid" && t.status !== "Filed" && N(t.amount) > 0){ const i = idx(t.dueDate); if(i<12) M[i].out += N(t.amount); }});
   D.cash.forEach(c => { if(!c.date) return; const i = raw(c.date); if(i < 0 || i > 11) return; if(c.direction === "In") M[i].inn += N(c.amount); else M[i].out += N(c.amount); });
   D.loans.forEach(l => { if(l.inForecast === "No" || l.status === "Settled") return; const s = loanSched(l);
     s.draws.forEach(d => { if(d.date < T) return; const i = raw(d.date); if(i >= 0 && i < 12) M[i].inn += N(d.amount); });
@@ -2692,7 +2756,10 @@ document.addEventListener("click", e => {
     case "packm": ui.packM = t.dataset.m; render(); return;
     case "packprint": try{ window.print(); }catch(e){ toast("Printing isn't available here. Use Download instead."); } return;
     case "packdl": packDownload(); return;
-    case "layout": ls.set("nx-layout2", document.documentElement.classList.contains("nx-wide") ? "mobile" : "wide"); applyLayout(); render(); return;
+    case "layout": setLayoutMode(layoutNow() === "wide" ? "mobile" : "wide"); render(); return;
+    case "display": displaySheet(); return;
+    case "settheme": ls.set("nx-theme", d.v); applyTheme(); displaySheet(); return;
+    case "setlayout": setLayoutMode(d.v); closeSheetSilently(); render(); displaySheet(); return;
     case "vatm": ui.vatM = t.dataset.m; ui.vatPaste.msg = ""; render(); return;
     case "vatpopen": ui.vatPaste.open = true; ui.vatPaste.msg = ""; render(); setTimeout(() => { const a = $("#vatpaste"); if(a) a.focus(); }, 30); return;
     case "vatpclose": ui.vatPaste = { kind: ui.vatPaste.kind, text:"", open:false, msg:"" }; render(); return;
