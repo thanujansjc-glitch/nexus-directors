@@ -9,6 +9,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Nexus">
 <title>Nexus Finance Desk</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%233fb950'/%3E%3Ctext x='32' y='44' font-family='Arial' font-weight='700' font-size='34' text-anchor='middle' fill='%230d1a10'%3EN%3C/text%3E%3C/svg%3E">
 <style>
 html,body{margin:0;background:#1f242b;color:#f4f6f8}
@@ -116,11 +118,25 @@ html.nx-mobile .ugrid{grid-template-columns:repeat(2,minmax(0,1fr))}
   <form id="nxf">
     <div class="hd"><div class="mk">N</div><div><b>Nexus Property Developers</b><div class="sub">Directors' view of the Finance Desk</div></div></div>
     <input type="password" id="nxpw" placeholder="Password" autocomplete="current-password" aria-label="Password" required>
-    <label><input type="checkbox" id="nxrem"> Remember on this phone</label>
+    <label><input type="checkbox" id="nxrem"> Remember on this device</label>
     <button id="nxgo" type="submit">Open</button>
     <div class="err" id="nxerr" role="alert"></div>
+    <button id="nxinst" type="button" hidden style="margin-top:10px;background:transparent;border:1px solid #3fb950;color:#3fb950">Install as app on this computer</button>
+    <div id="nxinsthelp" hidden style="margin-top:10px;font-size:12px;opacity:.75;line-height:1.4">To install: in Edge or Chrome, open the browser menu (⋯) and choose <span style="font-weight:600">Apps → Install this site as an app</span> (Edge) or <span style="font-weight:600">Cast, save and share → Install page as app</span> (Chrome).</div>
   </form>
 </div>
+<script>
+(function(){
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function(){});
+  var standalone = matchMedia("(display-mode: standalone)").matches || matchMedia("(display-mode: window-controls-overlay)").matches || navigator.standalone;
+  var btn = document.getElementById("nxinst"), help = document.getElementById("nxinsthelp"), ev = null;
+  if (standalone) return;
+  if (!/Mobi|Android|iPhone|iPad/.test(navigator.userAgent)) help.hidden = false;
+  addEventListener("beforeinstallprompt", function(e){ e.preventDefault(); ev = e; btn.hidden = false; help.hidden = true; });
+  btn.addEventListener("click", function(){ if (!ev) return; ev.prompt(); ev.userChoice.finally(function(){ ev = null; btn.hidden = true; }); });
+  addEventListener("appinstalled", function(){ btn.hidden = true; help.hidden = true; });
+})();
+</script>
 <div id="nxbar" hidden></div>
 <title>Nexus Finance Desk</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
