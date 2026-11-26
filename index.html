@@ -122,7 +122,6 @@ html.nx-mobile .ugrid{grid-template-columns:repeat(2,minmax(0,1fr))}
   </form>
 </div>
 <div id="nxbar" hidden></div>
-
 <title>Nexus Finance Desk</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap">
@@ -1022,7 +1021,7 @@ function viewTaxDeadlines(){
     <button class="item" data-edit="tax:${esc(t.id)}"><div><div class="t">${esc(t.item)}${exChip(t)}</div><div class="d">${esc([t.taxType, t.period].filter(Boolean).join(" · "))}</div><div style="margin-top:4px">${taxStatusChip(t)}</div></div>
     <div class="amt">${N(t.amount) ? fm(N(t.amount)) : "—"}<small>${fdate(t.dueDate)}</small></div></button>`).join("")}</div>`
     : emptyState(D.tax.length ? "Nothing in this filter." : "No tax deadlines yet.", D.tax.length ? null : "tax")}
-  <p class="note">Self-assessment calendar for Sri Lanka (Inland Revenue): income tax instalments on 15 Aug, 15 Nov, 15 Feb and 15 May; balance tax by 30 Sep; return by 30 Nov. VAT and SSCL paid by the 20th of the next month, VAT return by the 30th. WHT and APIT remitted by the 15th. Confirm each date against the IRD tax calendar.</p>`;
+  <p class="note">Self-assessment calendar for Sri Lanka (Inland Revenue): income tax instalments on 15 Aug, 15 Nov, 15 Feb and 15 May; balance tax by 30 Sep; return by 30 Nov. VAT and SSCL paid monthly by the 20th of the next month; VAT and SSCL returns are quarterly, due by the end of the month after the quarter. APIT remitted monthly by the 15th. WHT applies to dividends only: remit by the 15th of the month after the dividend is paid; annual WHT return by 30 April. Confirm each date against the IRD tax calendar.</p>`;
 }
 
 /* ---------- VAT workings: monthly output and input VAT (collection "vat", one document per month "yyyy-mm") ---------- */
@@ -2810,7 +2809,6 @@ render();
 })();
 })();
 </script>
-
 
 
 
