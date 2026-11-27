@@ -159,7 +159,6 @@ html[data-theme="light"] #nxbar .sep{color:#c3cad1}
 })();
 </script>
 <div id="nxbar" hidden></div>
-
 <title>Nexus Finance Desk</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap">
@@ -1317,10 +1316,11 @@ function viewVat(){
     </div>
     <div class="row">${can && ((vi && vi.status !== "Paid" && Math.abs(N(vi.amount)-Math.max(0,t.net)) >= 1) || (si && si.status !== "Paid" && Math.abs(N(si.amount)-t.sscl) >= 1)) ? `<button class="btn small primary" data-act="vattax">Put these amounts in the tax list</button>` : ""}${dl ? `<button class="btn small" data-act="vatxl">Download Excel workings</button>` : ""}</div>
   </section>` : ""}
-  ${v ? `<section class="stack"><div class="spread"><h3>Checks</h3>${C.filter(c=>c[0]==="bad").length ? chip(C.filter(c=>c[0]==="bad").length + " to fix","bad") : C.length ? chip(C.length + " to review","warn") : chip("All agree","good")}</div>
+  ${v ? `<section class="stack"><div class="spread"><h3>Checks</h3><div class="row" style="gap:6px;align-items:center">${C.filter(c=>c[0]==="bad").length ? chip(C.filter(c=>c[0]==="bad").length + " to fix","bad") : C.length ? chip(C.length + " to review","warn") : chip("All agree","good")}${can && C.some(c => c[0] !== "info") ? `<button class="btn small" data-act="vatq">Raise as queries</button>` : ""}</div></div>
     ${C.length ? `<div class="list">${C.map(c => `<div class="item" style="cursor:default;border-left:3px solid ${ico[c[0]]}"><div><div class="t">${esc(c[1])}</div><div class="d">${esc(c[2])}</div></div>${c[3] && can ? `<div class="amt"><button class="btn small" data-act="vatadd" data-i="${mi++}">Add</button></div>` : ""}</div>`).join("")}</div>`
       : `<div class="card note">Every line adds up (land + value + SSCL 2.5% + VAT 18% = receipt), every receipt agrees to the app, and every input invoice is 18%.</div>`}
   </section>` : ""}
+  ${qCard(m, closed, "VAT")}
   ${can ? scanCard(true) : ""}
   ${can ? `<section class="card stack">
     <div class="spread"><h3>Paste a schedule</h3>${P.open ? "" : `<button class="btn small" data-act="vatpopen">Open</button>`}</div>
@@ -1536,6 +1536,41 @@ function packData(m){
   const nm = mNext(m), taxRows = D.tax.filter(t => (t.dueDate || "").slice(0,7) === nm || (t.dueDate || "").slice(0,7) === m || (t.status !== "Paid" && t.status !== "Filed" && t.dueDate && t.dueDate < T)).sort((a,b) => (a.dueDate||"").localeCompare(b.dueDate||""));
   return { m, end, ag, byP, coll, top:Object.entries(top).sort((a,b) => b[1]-a[1]).slice(0,10), per, checks, F, taxRows, vat:vatDoc(m), rTot:sum(ro,outR), rOverTot:sum(rOver,outR) };
 }
+/* full cash flow breakdown for the directors' pack */
+function packCashFlow(m, cf, tb){
+  const prev = (periodOf(mPrev(m)) || {}).cashflow || null, pm = MONL[+mPrev(m).slice(5)-1], cm = MONL[+m.slice(5)-1];
+  const pa = (list, g) => { if(!prev) return null; const x = (prev[list] || []).find(y => y.g === g); return x ? N(x.a) : 0; };
+  const pct = (a, tot) => tot ? (a / tot * 100).toFixed(1) + "%" : "–";
+  const head = l => [l, cm, "% of total"].concat(prev ? [pm] : []);
+  const row = (label, a, tot, pv) => [label, fm(a), pct(a, tot)].concat(prev ? [pv == null ? "–" : fm(pv)] : []);
+  const ins = (cf.inflows || []).filter(x => N(x.a)), outs = (cf.outflows || []).filter(x => N(x.a));
+  const TI = N(cf.totalIn), TO = N(cf.totalOut);
+  const grp = g => /^work in progress/i.test(g) ? "Project spending" : /^tax/i.test(g) ? "Tax payments" : /transfer/i.test(g) ? "Transfers to Nexus's own accounts" : /director/i.test(g) ? "Directors" : "Running costs";
+  const order = ["Project spending","Running costs","Tax payments","Directors","Transfers to Nexus's own accounts"];
+  const G = {}; outs.forEach(x => { (G[grp(x.g)] = G[grp(x.g)] || []).push(x); });
+  const outRows = [];
+  order.filter(k => G[k]).forEach(k => {
+    const st = G[k].reduce((t,x) => t + N(x.a), 0), sp = prev ? G[k].reduce((t,x) => t + (pa("outflows", x.g) || 0), 0) : null;
+    outRows.push(row(`<b>${esc(k)}</b>`, st, TO, sp).map((c,i) => i ? `<b>${c}</b>` : c));
+    G[k].forEach(x => outRows.push(row("&nbsp;&nbsp;&nbsp;" + esc(x.g), N(x.a), TO, pa("outflows", x.g))));
+  });
+  const tr = (G["Transfers to Nexus's own accounts"] || []).reduce((t,x) => t + N(x.a), 0);
+  const cust = (cf.customers || []).slice().sort((a,b) => (a.project||"").localeCompare(b.project||"") || N(b.a) - N(a.a));
+  const byProj = {}; cust.forEach(c => { (byProj[c.project || "Other"] = byProj[c.project || "Other"] || []).push(c); });
+  const custRows = []; Object.keys(byProj).forEach(p => {
+    const st = byProj[p].reduce((t,c) => t + N(c.a), 0);
+    custRows.push([`<b>${esc(p)}</b>`, `<b>${fm(st)}</b>`, `<b>${byProj[p].length} receipt${byProj[p].length>1?"s":""}</b>`]);
+    byProj[p].forEach(c => custRows.push(["&nbsp;&nbsp;&nbsp;" + esc(c.l), fm(N(c.a)), ""]));
+  });
+  const big = outs.slice().sort((a,b) => N(b.a) - N(a.a))[0];
+  return `<h2>2. Cash flow · ${esc(cf.period || mName(m))}</h2>
+  ${tb(["Summary", cm].concat(prev ? [pm] : []), [["Cash received", fm(TI)].concat(prev ? [fm(N(prev.totalIn))] : []), ["Cash paid out", fm(TO)].concat(prev ? [fm(N(prev.totalOut))] : [])].concat(tr ? [["Of which moved to Nexus's own accounts", fm(tr)].concat(prev ? ["–"] : [])] : []), ["Net cash flow", fm(N(cf.net))].concat(prev ? [fm(N(prev.net))] : []))}
+  ${tr ? `<p class="pk-note">Excluding the ${fm(tr)} moved into Nexus's own money market account, which is still Nexus's cash, the net cash flow is <b>${fm(N(cf.net) + tr)}</b>.</p>` : ""}
+  <h3>Cash received</h3>${tb(head("Source"), ins.map(x => row(esc(x.g), N(x.a), TI, pa("inflows", x.g))), ["Total cash received", fm(TI), "100%"].concat(prev ? [fm(N(prev.totalIn))] : []))}
+  <h3>Cash paid out</h3>${tb(head("Payment"), outRows, ["Total cash paid out", fm(TO), "100%"].concat(prev ? [fm(N(prev.totalOut))] : []))}
+  ${custRows.length ? `<h3>Customer receipts by customer</h3>${tb(["Customer / unit", "LKR", ""], custRows, ["Total customer receipts", fm(N(cf.customersTotal) || cust.reduce((t,c) => t + N(c.a), 0)), `${cust.length} receipts`])}` : ""}
+  <p class="pk-note">Customer receipts were ${pct(ins.filter(x => /customer/i.test(x.g)).reduce((t,x) => t + N(x.a), 0), TI)} of cash received${big ? `; the largest payment was ${esc(big.g)} at ${fm(N(big.a))} (${pct(N(big.a), TO)} of payments)` : ""}. Source: ${esc(cf.source || "monthly cash flow workbook")}.</p>`;
+}
 function packHTML(m){
   const P = packData(m), t = P.vat ? vatTotals(P.vat) : null, cf = P.per.cashflow;
   const tb = (head, rows, foot) => `<table class="pk"><thead><tr>${head.map((h,i) => `<th${i ? ' class="r"' : ""}>${h}</th>`).join("")}</tr></thead><tbody>${rows.map(r => `<tr>${r.map((c,i) => `<td${i ? ' class="r"' : ""}>${c}</td>`).join("")}</tr>`).join("")}</tbody>${foot ? `<tfoot><tr>${foot.map((c,i) => `<td${i ? ' class="r"' : ""}>${c}</td>`).join("")}</tr></tfoot>` : ""}</table>`;
@@ -1546,7 +1581,7 @@ function packHTML(m){
   <div class="pk-cover"><div class="pk-mark">N</div><div><div class="pk-org">Nexus Property Developers (Pvt) Ltd</div><h1>Monthly management pack · ${mName(m)}</h1><div class="pk-sub">Prepared ${fdate(T)} from the Nexus Finance Desk · all amounts in LKR</div></div></div>
   <div class="pk-kpis"><div><span>Cash at bank</span><b>${fm(cashAtBank())}</b></div><div><span>Owed by customers</span><b>${fm(P.rTot)}</b></div><div><span>Of which overdue</span><b>${fm(P.rOverTot)}</b></div><div><span>Collected in ${MONL[+m.slice(5)-1]}</span><b>${fm(sum(Object.values(P.coll), v => v))}</b></div></div>
   <h2>1. Cash at bank</h2>${tb(["Account","Balance","As at"], bk.map(b => [esc(b.name), fm(N(b.balance)), fdate(b.asOf)]), ["Total", fm(cashAtBank()), ""])}
-  ${cf ? `<h2>2. Cash flow · ${esc(cf.period || mName(m))}</h2>${tb(["", "LKR"], [["Total inflows", fm(N(cf.totalIn))], ["Total outflows", fm(N(cf.totalOut))]], ["Net cash flow", fm(N(cf.net))])}` : `<h2>2. Cash flow</h2><p class="pk-note">No cash flow summary loaded for ${mName(m)}.</p>`}
+  ${cf ? packCashFlow(m, cf, tb) : `<h2>2. Cash flow</h2><p class="pk-note">No cash flow summary loaded for ${mName(m)}.</p>`}
   <h2>3. Customer receivables</h2>
   ${tb(["Ageing","LKR"], [["Not yet due", fm(P.ag[0])], ["1–30 days overdue", fm(P.ag[1])], ["31–60 days", fm(P.ag[2])], ["61–90 days", fm(P.ag[3])], ["Over 90 days", fm(P.ag[4])]], ["Total outstanding", fm(P.rTot)])}
   ${tb(["Project","Outstanding","Collected in " + MONL[+m.slice(5)-1]], Object.keys(Object.assign({}, P.byP, P.coll)).sort().map(p => [esc(p), fm(P.byP[p] || 0), fm(P.coll[p] || 0)]))}
@@ -2206,19 +2241,19 @@ function cfCompare(m){
   const appTotal = Object.values(app).reduce((t,v) => t + v, 0);
   return { cf, rows, diffs: rows.filter(r => Math.abs(r.wb - r.app) >= 1), appTotal, totalOk: Math.abs(N(cf.customersTotal) - appTotal) < 1 };
 }
-function qCard(m, cl){
-  const qs = ((periodOf(m) || {}).queries || []).slice().sort((a,b) => (a.done?1:0) - (b.done?1:0) || (a.raisedAt||"").localeCompare(b.raisedAt||""));
+function qCard(m, cl, area){
+  const qs = ((periodOf(m) || {}).queries || []).filter(q => !area || q.area === area).slice().sort((a,b) => (a.done?1:0) - (b.done?1:0) || (a.raisedAt||"").localeCompare(b.raisedAt||""));
   const open = qs.filter(q => !q.done), edit = !cl && canWrite && !!db;
   const row = q => `<div class="item" style="cursor:default;align-items:flex-start">
       <div style="display:flex;gap:10px;align-items:flex-start;min-width:0">
         ${edit ? `<button class="btn small ${q.done?"primary":""}" data-q="${m}:${esc(q.id)}" aria-pressed="${!!q.done}" aria-label="${q.done?"Mark as open":"Mark as solved"}" style="flex:none;min-width:40px">${q.done?"✓":"☐"}</button>` : `<span style="flex:none;font-weight:700;color:${q.done?"var(--good)":"var(--warn)"}">${q.done?"✓":"☐"}</span>`}
-        <div style="min-width:0"><div class="t" style="${q.done?"text-decoration:line-through;color:var(--muted)":""}">${esc(q.text)}</div>
+        <div style="min-width:0"><div class="t" style="${q.done?"text-decoration:line-through;color:var(--muted)":""}">${!area && q.area ? chip(esc(q.area)) + " " : ""}${esc(q.text)}</div>
         <div class="d">${q.carriedFrom ? `Carried from ${mName(q.carriedFrom)} · ` : ""}Raised ${fdate((q.raisedAt||"").slice(0,10))} by ${who(q.raisedBy)}${q.done ? ` · ${q.carriedTo ? `carried to ${mName(q.carriedTo)}` : "solved"} ${fdate((q.doneAt||"").slice(0,10))} by ${who(q.doneBy)}` : ""}</div></div>
       </div>
       <div class="amt">${N(q.amount) ? fm(q.amount) : ""}</div></div>`;
-  return `<section class="stack"><div class="spread"><h3>Queries${qs.length ? ` · ${open.length} open` : ""}</h3>${edit && open.length ? `<button class="btn small" data-act="qcarry" data-m="${m}">Carry open to ${mName(mNext(m))}</button>` : ""}</div>
-    ${qs.length ? `<div class="list">${qs.map(row).join("")}</div>` : `<p class="note" style="margin:0">No queries for this month.</p>`}
-    ${edit ? `<div class="card" style="display:grid;gap:8px"><input id="qtext" placeholder="New query, e.g. receipt of 27 Oct not identified" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);color:var(--fg)"><div class="row"><input id="qamt" inputmode="decimal" placeholder="Amount (optional)" style="flex:1;min-width:0;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);color:var(--fg)"><button class="btn primary small" data-act="qadd" data-m="${m}">Add query</button></div></div>` : ""}
+  return `<section class="stack"><div class="spread"><h3>${area ? area + " queries" : "Queries"}${qs.length ? ` · ${open.length} open` : ""}</h3>${edit && open.length && !area ? `<button class="btn small" data-act="qcarry" data-m="${m}">Carry open to ${mName(mNext(m))}</button>` : ""}</div>
+    ${qs.length ? `<div class="list">${qs.map(row).join("")}</div>` : `<p class="note" style="margin:0">${area ? `No ${area} queries for this month.` : "No queries for this month."}</p>`}
+    ${edit ? `<div class="card" style="display:grid;gap:8px"><input id="qtext" placeholder="New query, e.g. receipt of 27 Oct not identified" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);color:var(--fg)"><div class="row"><input id="qamt" inputmode="decimal" placeholder="Amount (optional)" style="flex:1;min-width:0;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);color:var(--fg)"><button class="btn primary small" data-act="qadd" data-m="${m}"${area ? ` data-area="${esc(area)}"` : ""}>Add query</button></div></div>` : ""}
   </section>`;
 }
 function cfCard(m){
@@ -2289,11 +2324,21 @@ async function toggleCheck(arg){
   catch(e){ toast("Couldn't save. Try again."); }
 }
 const qid = () => "q" + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
-async function addQuery(m){
+/* turn each VAT check for the month into a VAT query (once) */
+async function vatRaiseQueries(){
+  const m = ui.vatM, v = vatDoc(m); if(!v || isClosed(m) || !canWrite || !db) return;
+  const have = ((periodOf(m) || {}).queries || []), now = new Date().toISOString();
+  const add = vatChecks(m, v).filter(c => c[0] !== "info").map(c => `${c[1]}: ${c[2]}`).filter(t => !have.some(q => q.area === "VAT" && q.text === t))
+    .map(t => ({ id: qid(), area: "VAT", text: t, amount: 0, raisedBy: uid || null, raisedAt: now, done: false }));
+  if(!add.length){ toast("Every check already has a query"); return; }
+  try{ await savePeriod(m, { queries: have.concat(add) }, `${add.length} VAT quer${add.length>1?"ies":"y"} raised from the checks`); toast(`${add.length} quer${add.length>1?"ies":"y"} added`); }catch(e){ toast("Couldn't save. Try again."); }
+}
+async function addQuery(m, area){
   const t = ($("#qtext") && $("#qtext").value.trim()) || ""; if(!t){ toast("Type the query first"); return; }
   if(isClosed(m)) return;
   const amt = N(String(($("#qamt") && $("#qamt").value) || "").replace(/,/g,""));
-  const qs = ((periodOf(m) || {}).queries || []).concat([{ id: qid(), text: t, amount: amt || 0, raisedBy: uid || null, raisedAt: new Date().toISOString(), done: false }]);
+  const nq = { id: qid(), text: t, amount: amt || 0, raisedBy: uid || null, raisedAt: new Date().toISOString(), done: false }; if(area) nq.area = area;
+  const qs = ((periodOf(m) || {}).queries || []).concat([nq]);
   try{ await savePeriod(m, { queries: qs }, `Query raised: ${t}`); toast("Query added"); }catch(e){ toast("Couldn't save. Try again."); }
 }
 async function toggleQuery(arg){
@@ -2778,7 +2823,8 @@ document.addEventListener("click", e => {
     case "scansave": scanSave(); return;
     case "closemonth": closeMonth(t.dataset.m); return;
     case "reopen": reopenMonth(t.dataset.m); return;
-    case "qadd": addQuery(t.dataset.m); return;
+    case "qadd": addQuery(t.dataset.m, t.dataset.area); return;
+    case "vatq": vatRaiseQueries(); return;
     case "qcarry": carryQueries(t.dataset.m); return;
     case "export": doExport(); return;
     case "template": doTemplate(); return;
@@ -2893,7 +2939,6 @@ render();
 })();
 })();
 </script>
-
 
 
 
